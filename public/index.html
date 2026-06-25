@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Earth Pulse — The World Is Alive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../src/styles/main.css" />
+</head>
+<body>
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="loader-globe-ring"></div>
+      <div class="loader-text">
+        <span class="loader-label">EARTH PULSE</span>
+        <span class="loader-sub">Connecting to the planet...</span>
+      </div>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="nav-logo">
+      <span class="nav-dot"></span>
+      EARTH PULSE
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn active" data-filter="all">All</button>
+      <button class="nav-btn" data-filter="climate">Climate</button>
+      <button class="nav-btn" data-filter="hunger">Hunger</button>
+      <button class="nav-btn" data-filter="conflict">Conflict</button>
+      <button class="nav-btn" data-filter="health">Health</button>
+      <button class="nav-btn" data-filter="education">Education</button>
+      <button class="nav-btn" data-filter="economy">Economy</button>
+    </div>
+    <div class="nav-live">
+      <span class="pulse-dot"></span>
+      LIVE
+    </div>
+  </nav>
+
+  <!-- HERO TEXT -->
+  <div id="hero-text">
+    <h1 class="hero-title">THE WORLD<br/><em>IS ALIVE.</em></h1>
+    <p class="hero-sub">Tap any glowing point to explore a crisis happening right now.</p>
+     <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-num" id="stat-problems">30</span>
+        <span class="stat-label">Active Crises</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="stat-countries">195</span>
+        <span class="stat-label">Countries</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="stat-people">8.1B</span>
+        <span class="stat-label">People Affected</span>
+      </div>
+      <div class="stat-item earth-health">
+        <span class="stat-num health-score" id="stat-health">42</span>
+        <span class="stat-label">Earth Health Score</span>
+        <div class="health-bar">
+          <div class="health-fill" id="health-fill"></div>
+        </div>
+      </div>
+    </div>
+
+  <!-- GLOBE CANVAS -->
+  <canvas id="globe-canvas"></canvas>
+
+  <!-- SIDE PANEL -->
+  <div id="side-panel" class="panel-closed">
+    <button id="panel-close">✕</button>
+    <div class="panel-category" id="panel-category"></div>
+    <h2 class="panel-title" id="panel-title"></h2>
+    <div class="panel-location" id="panel-location">
+      <span class="panel-flag" id="panel-flag"></span>
+      <span id="panel-region"></span>
+    </div>
+
+    <div class="panel-stats-row" id="panel-stats-row"></div>
+
+    <p class="panel-description" id="panel-description"></p>
+
+    <div class="panel-section">
+      <h4>RIPPLE EFFECTS</h4>
+      <div class="ripple-tags" id="ripple-tags"></div>
+    </div>
+
+    <div class="panel-section">
+      <h4>WHAT YOU CAN DO</h4>
+      <div class="actions-list" id="actions-list"></div>
+    </div>
+     <div class="panel-section">
+      <h4>🌡️ LIVE CONDITIONS</h4>
+      <div id="climate-data" class="climate-data"></div>
+    </div>
+ 
+    <div class="panel-section">
+      <h4>📰 LATEST NEWS</h4>
+      <div id="news-feed" class="news-feed"></div>
+    </div>
+
+    <div class="panel-section ai-section">
+      <h4>ASK THE GLOBE</h4>
+      <div class="ai-input-row">
+        <input type="text" id="ai-input" placeholder="Ask anything about this crisis..." />
+        <button id="ai-send">→</button>
+      </div>
+      <div class="ai-response" id="ai-response"></div>
+    </div>
+
+    <button class="share-btn" id="share-btn">
+      ↗ Share This Crisis
+    </button>
+  </div>
+
+  <!-- RIPPLE MODAL (connection lines label) -->
+  <div id="tooltip" class="globe-tooltip hidden"></div>
+
+  <!-- TIME MACHINE -->
+  <div id="time-machine">
+    <span class="tm-label">TIME MACHINE</span>
+    <input type="range" id="year-slider" min="1990" max="2026" value="2026" step="1" />
+    <span class="tm-year" id="tm-year">2026</span>
+  </div>
+
+  <!-- BOTTOM TRAY — category cards -->
+  <div id="bottom-tray">
+    <div class="tray-scroll" id="tray-scroll"></div>
+  </div>
+
+  <!-- THREE.JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <script type="module" src="../src/globe/globe.js"></script>
+  <script type="module" src="../src/components/panel.js"></script>
+  <script type="module" src="../src/components/cards.js"></script>
+</body>
+</html>
