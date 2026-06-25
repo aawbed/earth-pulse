@@ -80,6 +80,12 @@ export function openPanel(prob) {
   document.getElementById('ai-response').textContent = '';
   document.getElementById('ai-input').value = '';
 
+  // Show ripple lines
+  if (window.__globeModule) {
+    window.__globeModule.clearRippleLines();
+    window.__globeModule.showRippleLines(prob);
+  }
+
   // Load live climate data
   loadClimateData(prob);
 

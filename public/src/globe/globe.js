@@ -368,4 +368,68 @@ setTimeout(() => {
   setTimeout(() => document.getElementById('loader').remove(), 900);
 }, 2800);
 
-export { latLonToVec3, catColors, problems };
+// ---- Ripple connection lines ----
+let rippleLines = [];
+
+export function showRippleLines(prob) {
+  clearRippleLines();
+  const ripples = prob.ripples || prob.ripple_effects || [];
+  const fromLat = Array.isArray(prob.coordinates) ? prob.coordinates[0] : prob.coordinates.lat;
+  const fromLon = Array.isArray(prob.coordinates) ? prob.coordinates[1] : prob.coordinates.lon;
+  const fromPos = latLonToVec3(fromLat, fromLon, 1.02);
+
+  ripples.forEach(rippleId => {
+    const target = problems.find(p => p.id === rippleId);
+    if (!target) return;
+
+    const toLat = Array.isArray(target.coordinates) ? target.coordinates[0] : target.coordinates.lat;
+    const toLon = Array.isArray(target.coordinates) ? target.coordinates[1] : target.coordinates.lon;
+    const toPos = latLonToVec3(toLat, toLon, 1.02);
+
+    // Build arc between two points
+    const points = [];
+    const segments = 50;
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const pos = new THREE.Vector3().lerpVectors(fromPos, toPos, t);
+      // Push arc outward
+      pos.normalize().multiplyScalar(1.02 + Math.sin(Math.PI * t) * 0.3);
+      points.push(pos);
+    }
+
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xf700ff,
+      transparent: true,
+      opacity: 0.7
+    });
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    rippleLines.push(line);
+
+    // Animate line opacity
+    let t2 = 0;
+    const pulse = setInterval(() => {
+      t2 += 0.05;
+      mat.opacity = 0.4 + 0.3 * Math.sin(t2);
+    }, 50);
+    line._pulse = pulse;
+  });
+}
+
+export function clearRippleLines() {
+  rippleLines.forEach(l => {
+    clearInterval(l._pulse);
+    scene.remove(l);
+  });
+  rippleLines = [];
+}
+
+// ---- Fly to marker ----
+export function flyToMarker(prob) {
+  const targetMarker = markers.find(m => m.prob.id === prob.id);
+  if (!targetMarker) return;
+  openPanel(prob);
+}
+
+export { latLonToVec3, catColors, problems, flyToMarker };
