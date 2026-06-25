@@ -23,3 +23,9 @@ function animateCounter(id, from, to, duration) {
 }
 
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// Creator signature auto-hide
+setTimeout(() => {
+  const sig = document.getElementById('creator-sig');
+  if (sig) sig.classList.add('hidden');
+}, 5000);
