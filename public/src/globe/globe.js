@@ -375,8 +375,6 @@ setTimeout(() => {
   setTimeout(() => document.getElementById('loader').remove(), 900);
 }, 2800);
 
-// ---- Ripple connection lines ----
-let rippleLines = [];
 
 export function showRippleLines(prob) {
   clearRippleLines();
