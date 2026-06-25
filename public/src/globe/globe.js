@@ -426,10 +426,13 @@ export function clearRippleLines() {
 }
 
 // ---- Fly to marker ----
-export function flyToMarker(prob) {
+  function flyToMarker(prob) {
   const targetMarker = markers.find(m => m.prob.id === prob.id);
   if (!targetMarker) return;
   openPanel(prob);
 }
 
-export { latLonToVec3, catColors, problems, flyToMarker };
+// Expose to panel
+window.__globeModule = { showRippleLines, clearRippleLines };
+
+export { latLonToVec3, catColors, problems };
