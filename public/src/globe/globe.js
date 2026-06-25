@@ -335,6 +335,12 @@ function animate() {
 
     // Sync group rotation with globe
     m.group.rotation.copy(globe.rotation);
+
+  });
+
+  // Sync ripple lines with globe rotation
+  rippleLines.forEach(l => {
+    l.group.rotation.copy(globe.rotation);
   });
 
   // Atmosphere pulse
@@ -386,42 +392,29 @@ export function showRippleLines(prob) {
     const toLon = Array.isArray(target.coordinates) ? target.coordinates[1] : target.coordinates.lon;
     const toPos = latLonToVec3(toLat, toLon, 1.02);
 
-    // Build arc between two points
     const points = [];
-    const segments = 50;
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
+    for (let i = 0; i <= 50; i++) {
+      const t = i / 50;
       const pos = new THREE.Vector3().lerpVectors(fromPos, toPos, t);
-      // Push arc outward
       pos.normalize().multiplyScalar(1.02 + Math.sin(Math.PI * t) * 0.3);
       points.push(pos);
     }
 
     const geo = new THREE.BufferGeometry().setFromPoints(points);
-    const mat = new THREE.LineBasicMaterial({
-      color: 0xf700ff,
-      transparent: true,
-      opacity: 0.7
-    });
+    const mat = new THREE.LineBasicMaterial({ color: 0xf700ff, transparent: true, opacity: 0.7 });
     const line = new THREE.Line(geo, mat);
-    scene.add(line);
-    rippleLines.push(line);
 
-    // Animate line opacity
-    let t2 = 0;
-    const pulse = setInterval(() => {
-      t2 += 0.05;
-      mat.opacity = 0.4 + 0.3 * Math.sin(t2);
-    }, 50);
-    line._pulse = pulse;
+    // Wrap in group so it rotates with globe
+    const group = new THREE.Group();
+    group.add(line);
+    group.rotation.copy(globe.rotation);
+    scene.add(group);
+    rippleLines.push({ group, mat });
   });
 }
 
 export function clearRippleLines() {
-  rippleLines.forEach(l => {
-    clearInterval(l._pulse);
-    scene.remove(l);
-  });
+  rippleLines.forEach(l => scene.remove(l.group));
   rippleLines = [];
 }
 
