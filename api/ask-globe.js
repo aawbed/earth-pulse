@@ -4,13 +4,19 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { question, problem } = req.body;
-
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(200).json({ answer: 'Error: GROQ_API_KEY not set in environment.' });
-  }
-
   try {
+    const { question, problem } = req.body || {};
+
+    if (!question || !problem) {
+      return res.status(200).json({ answer: 'Missing question or problem data.' });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(200).json({ answer: 'Error: GROQ_API_KEY not configured.' });
+    }
+
+    const region = Array.isArray(problem.regions) ? problem.regions[0] : (problem.region || 'Unknown');
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -18,15 +24,12 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 300,
         messages: [
           {
             role: 'system',
-            content: `You are an expert analyst for Earth Pulse, a global crisis visualization platform.
-The user is looking at: "${problem.title}" in ${Array.isArray(problem.regions) ? problem.regions[0] : problem.region}.
-Category: ${problem.category}. Description: ${problem.description}.
-Answer concisely (2-4 sentences), insightful and human. No bullet points.`
+            content: `You are an expert analyst for Earth Pulse, a global crisis visualization platform. The user is looking at: "${problem.title}" in ${region}. Category: ${problem.category}. Description: ${problem.description}. Answer concisely (2-4 sentences), insightful and human. No bullet points.`
           },
           { role: 'user', content: question }
         ]
@@ -34,13 +37,16 @@ Answer concisely (2-4 sentences), insightful and human. No bullet points.`
     });
 
     const data = await response.json();
+
     if (data.error) {
       return res.status(200).json({ answer: `Groq error: ${data.error.message}` });
     }
-    res.status(200).json({ 
-      answer: data.choices?.[0]?.message?.content || 'No response.' 
+
+    res.status(200).json({
+      answer: data.choices?.[0]?.message?.content || 'No response.'
     });
+
   } catch (err) {
-    res.status(200).json({ answer: `Connection error: ${err.message}` });
+    res.status(200).json({ answer: `Server error: ${err.message}` });
   }
 }
