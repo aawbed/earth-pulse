@@ -8,17 +8,21 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,windspeed_10m,weathercode&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=precipitation_sum&timezone=auto&forecast_days=7`
     );
     const data = await response.json();
-    const current = data.current;
+    const w = data.current_weather;
+
+    // Sum of next 7 days precipitation
+    const weeklyRain = data.daily?.precipitation_sum
+      ? data.daily.precipitation_sum.reduce((a, b) => a + (b || 0), 0).toFixed(1)
+      : '0.0';
 
     res.status(200).json({
-      temperature: current.temperature_2m,
-      precipitation: current.precipitation,
-      windspeed: current.windspeed_10m,
-      weathercode: current.weathercode,
-      unit: data.current_units?.temperature_2m || '°C'
+      temperature: w.temperature,
+      windspeed: w.windspeed,
+      precipitation: weeklyRain + ' (7-day)',
+      unit: '°C'
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch climate data' });
