@@ -29,7 +29,10 @@ Answer concisely (2-4 sentences), insightful and human. No bullet points.`
   });
 
   const data = await response.json();
-  res.status(200).json({ 
-    answer: data.choices?.[0]?.message?.content || 'No response.' 
-  });
+  if (data.error) {
+  return res.status(200).json({ answer: `API Error: ${data.error.message}` });
+}
+res.status(200).json({ 
+  answer: data.choices?.[0]?.message?.content || 'No response.' 
+});
 }

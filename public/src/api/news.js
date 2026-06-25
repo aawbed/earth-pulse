@@ -6,12 +6,20 @@ export default async function handler(req, res) {
 
   const { topic, region } = req.query;
 
+  if (!process.env.GNEWS_API_KEY) {
+    return res.status(200).json({ articles: [], error: 'GNEWS_API_KEY not set' });
+  }
+
   try {
-    const query = encodeURIComponent(`${topic} ${region} crisis`);
+    const query = encodeURIComponent(`${topic} ${region}`);
     const response = await fetch(
       `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${process.env.GNEWS_API_KEY}`
     );
     const data = await response.json();
+
+    if (data.errors) {
+      return res.status(200).json({ articles: [], error: data.errors[0] });
+    }
 
     const articles = (data.articles || []).map(a => ({
       title: a.title,
@@ -23,6 +31,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ articles });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch news' });
+    res.status(200).json({ articles: [], error: err.message });
   }
 }
