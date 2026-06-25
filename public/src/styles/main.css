@@ -90,6 +90,7 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 28px;
   background: linear-gradient(to bottom, rgba(3,7,18,0.95), transparent);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
