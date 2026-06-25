@@ -121,6 +121,7 @@ const catColors = {
 let problems = [];
 let markers = [];
 let activeFilter = 'all';
+let rippleLines = [];
 
 async function loadProblems() {
   try {
