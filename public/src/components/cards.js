@@ -48,3 +48,18 @@ window.addEventListener('scroll', () => {
     hint.style.opacity = '0';
   }
 }, { passive: true });
+
+// Hide fixed UI when scrolling past globe
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY > window.innerHeight * 0.8;
+  const timeMachine = document.getElementById('time-machine');
+  const bottomTray = document.getElementById('bottom-tray');
+  const heroText = document.getElementById('hero-text');
+  const nav = document.getElementById('nav');
+
+  if (timeMachine) timeMachine.style.opacity = scrolled ? '0' : '1';
+  if (timeMachine) timeMachine.style.pointerEvents = scrolled ? 'none' : 'auto';
+  if (bottomTray) bottomTray.style.opacity = scrolled ? '0' : '1';
+  if (bottomTray) bottomTray.style.pointerEvents = scrolled ? 'none' : 'auto';
+  if (heroText) heroText.style.opacity = scrolled ? '0' : '1';
+}, { passive: true });
