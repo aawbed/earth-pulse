@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const query = encodeURIComponent(`${topic} ${region}`);
+    const query = encodeURIComponent(`${topic}`);
     const response = await fetch(
       `https://gnews.io/api/v4/search?q=${query}&lang=en&max=3&apikey=${process.env.GNEWS_API_KEY}`
     );
