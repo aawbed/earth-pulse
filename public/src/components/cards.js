@@ -29,3 +29,22 @@ setTimeout(() => {
   const sig = document.getElementById('creator-sig');
   if (sig) sig.classList.add('hidden');
 }, 5000);
+
+// Scroll reveal
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+revealEls.forEach(el => observer.observe(el));
+
+// Hide scroll hint after scrolling
+window.addEventListener('scroll', () => {
+  const hint = document.querySelector('.scroll-hint');
+  if (hint && window.scrollY > 100) {
+    hint.style.opacity = '0';
+  }
+}, { passive: true });

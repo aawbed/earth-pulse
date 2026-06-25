@@ -140,10 +140,227 @@
   <!-- CREATOR SIGNATURE -->
 <div id="creator-sig">
   <span class="sig-built">Built by</span>
-  <span class="sig-name">Jermaine</span>
+  <span class="sig-name">Jermaine Obed</span>
   <span class="sig-dot">·</span>
   <span class="sig-tag">Earth Pulse 2026</span>
 </div>
+
+<!-- SCROLL SECTIONS -->
+
+  <!-- Section 1 spacer so content starts below globe -->
+  <div id="globe-section" style="height:100vh;pointer-events:none;"></div>
+
+  <!-- Scroll hint -->
+  <div class="scroll-hint" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:20;">
+    <span class="scroll-hint-text">Scroll to explore</span>
+    <div class="scroll-hint-arrow"></div>
+  </div>
+
+  <!-- SECTION 2: Crisis Showcase -->
+  <section class="scroll-section" id="crisis-showcase">
+    <div class="section-eyebrow">The Crisis Index</div>
+    <h2 class="section-title reveal">Six categories.<br/>One planet in crisis.</h2>
+    <p class="section-sub reveal">Every glowing point on the globe belongs to one of six interconnected crisis categories. They don't exist in isolation — pull one thread and the whole world feels it.</p>
+
+    <div class="showcase-grid">
+      <div class="showcase-card cat-climate reveal">
+        <span class="showcase-icon">🌡️</span>
+        <div class="showcase-cat">Climate</div>
+        <div class="showcase-heading">The planet is overheating</div>
+        <div class="showcase-desc">Rising seas, catastrophic wildfires, and extreme droughts are no longer future predictions — they're today's headlines.</div>
+        <div class="showcase-stat">1.2°C</div>
+        <div class="showcase-stat-label">Above pre-industrial average</div>
+      </div>
+      <div class="showcase-card cat-hunger reveal">
+        <span class="showcase-icon">🌾</span>
+        <div class="showcase-cat">Hunger</div>
+        <div class="showcase-heading">733 million go to bed hungry</div>
+        <div class="showcase-desc">Crop failures, conflict, and inequality are pushing food insecurity to levels not seen in decades.</div>
+        <div class="showcase-stat">733M</div>
+        <div class="showcase-stat-label">People facing hunger daily</div>
+      </div>
+      <div class="showcase-card cat-conflict reveal">
+        <span class="showcase-icon">⚔️</span>
+        <div class="showcase-cat">Conflict</div>
+        <div class="showcase-heading">117M displaced worldwide</div>
+        <div class="showcase-desc">More people are forcibly displaced today than at any point since World War II — and the number keeps climbing.</div>
+        <div class="showcase-stat">117M</div>
+        <div class="showcase-stat-label">Forcibly displaced people</div>
+      </div>
+      <div class="showcase-card cat-health reveal">
+        <span class="showcase-icon">🏥</span>
+        <div class="showcase-cat">Health</div>
+        <div class="showcase-heading">Half the world lacks basic care</div>
+        <div class="showcase-desc">4.5 billion people have no access to essential health services. Preventable diseases still kill millions annually.</div>
+        <div class="showcase-stat">4.5B</div>
+        <div class="showcase-stat-label">Without essential health services</div>
+      </div>
+      <div class="showcase-card cat-education reveal">
+        <span class="showcase-icon">📚</span>
+        <div class="showcase-cat">Education</div>
+        <div class="showcase-heading">244M children out of school</div>
+        <div class="showcase-desc">The education crisis is a silent emergency — gender gaps, poverty, and conflict keep hundreds of millions from learning.</div>
+        <div class="showcase-stat">244M</div>
+        <div class="showcase-stat-label">Children out of school globally</div>
+      </div>
+      <div class="showcase-card cat-economy reveal">
+        <span class="showcase-icon">💰</span>
+        <div class="showcase-cat">Economy</div>
+        <div class="showcase-heading">The gap keeps widening</div>
+        <div class="showcase-desc">The world's richest 1% own more wealth than the bottom 95% combined. Inequality is accelerating, not slowing.</div>
+        <div class="showcase-stat">1%</div>
+        <div class="showcase-stat-label">Own more than the bottom 95%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: Earth Health Dashboard -->
+  <section class="scroll-section" id="health-dashboard">
+    <div class="section-eyebrow">Earth Health Score</div>
+    <h2 class="section-title reveal">The planet's vital signs,<br/><em style="font-style:normal;-webkit-text-fill-color:transparent;-webkit-text-stroke:1.5px #ff4060;">in critical condition.</em></h2>
+    <p class="section-sub reveal">We score Earth's health across six dimensions. 100 means thriving. Right now, we're at 42 — and falling.</p>
+
+    <div class="health-dashboard-grid reveal">
+      <div class="health-score-display">
+        <div class="health-score-ring">
+          <svg width="240" height="240" viewBox="0 0 240 240">
+            <circle cx="120" cy="120" r="100" fill="none" stroke="#0d1526" stroke-width="16"/>
+            <circle cx="120" cy="120" r="100" fill="none" stroke="#ff4060" stroke-width="16"
+              stroke-dasharray="628" stroke-dashoffset="364"
+              stroke-linecap="round"/>
+          </svg>
+          <div class="health-score-number">
+            <div class="health-big-num">42</div>
+            <div class="health-big-label">/ 100</div>
+          </div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;text-align:center;text-transform:uppercase;">
+          Earth Health Index · 2026
+        </div>
+      </div>
+
+      <div class="health-breakdown">
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">🌡️ Climate Stability</span>
+            <span class="health-metric-val" style="color:#00f5d4">31/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:31%;background:#00f5d4;"></div>
+          </div>
+        </div>
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">🌾 Food Security</span>
+            <span class="health-metric-val" style="color:#ffbe0b">38/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:38%;background:#ffbe0b;"></div>
+          </div>
+        </div>
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">⚔️ Peace Index</span>
+            <span class="health-metric-val" style="color:#ff4060">29/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:29%;background:#ff4060;"></div>
+          </div>
+        </div>
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">🏥 Global Health</span>
+            <span class="health-metric-val" style="color:#a78bfa">55/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:55%;background:#a78bfa;"></div>
+          </div>
+        </div>
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">📚 Education Access</span>
+            <span class="health-metric-val" style="color:#38bdf8">48/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:48%;background:#38bdf8;"></div>
+          </div>
+        </div>
+        <div class="health-metric">
+          <div class="health-metric-header">
+            <span class="health-metric-name">💰 Economic Equality</span>
+            <span class="health-metric-val" style="color:#fb923c">22/100</span>
+          </div>
+          <div class="health-metric-bar">
+            <div class="health-metric-fill" style="width:22%;background:#fb923c;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: How To Help -->
+  <section class="scroll-section" id="how-to-help">
+    <div class="section-eyebrow">Take Action</div>
+    <h2 class="section-title reveal">You can't fix everything.<br/>But you can fix something.</h2>
+    <p class="section-sub reveal">These organizations are on the ground, doing the work. Every contribution — time, money, or attention — moves the needle.</p>
+
+    <div class="help-grid">
+      <a class="help-card reveal" href="https://www.unhcr.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">🏕️</span>
+        <div class="help-card-org">UNHCR</div>
+        <div class="help-card-title">Protect displaced people</div>
+        <div class="help-card-desc">The UN Refugee Agency provides life-saving assistance to 117 million forcibly displaced people worldwide.</div>
+        <div class="help-card-action">Donate → unhcr.org</div>
+      </a>
+      <a class="help-card reveal" href="https://www.wfp.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">🌾</span>
+        <div class="help-card-org">World Food Programme</div>
+        <div class="help-card-title">End hunger now</div>
+        <div class="help-card-desc">WFP is the world's largest humanitarian organization fighting hunger and promoting food security globally.</div>
+        <div class="help-card-action">Donate → wfp.org</div>
+      </a>
+      <a class="help-card reveal" href="https://www.doctorswithoutborders.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">🏥</span>
+        <div class="help-card-org">Médecins Sans Frontières</div>
+        <div class="help-card-title">Bring medicine to crisis zones</div>
+        <div class="help-card-desc">MSF delivers emergency medical care to people affected by conflict, epidemics, and disasters in 70+ countries.</div>
+        <div class="help-card-action">Donate → msf.org</div>
+      </a>
+      <a class="help-card reveal" href="https://www.climatereality.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">🌍</span>
+        <div class="help-card-org">Climate Reality Project</div>
+        <div class="help-card-title">Fight the climate crisis</div>
+        <div class="help-card-desc">Founded by Al Gore, this organization trains climate activists and drives policy change across 175+ countries.</div>
+        <div class="help-card-action">Join → climatereality.org</div>
+      </a>
+      <a class="help-card reveal" href="https://www.unicef.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">📚</span>
+        <div class="help-card-org">UNICEF</div>
+        <div class="help-card-title">Give every child a future</div>
+        <div class="help-card-desc">UNICEF works in 190 countries to protect children's rights to education, health, and safety from harm.</div>
+        <div class="help-card-action">Donate → unicef.org</div>
+      </a>
+      <a class="help-card reveal" href="https://www.oxfam.org" target="_blank" rel="noopener">
+        <span class="help-card-icon">⚖️</span>
+        <div class="help-card-org">Oxfam</div>
+        <div class="help-card-title">Fight inequality at the root</div>
+        <div class="help-card-desc">Oxfam tackles the systemic causes of poverty and inequality through aid, advocacy, and campaigning in 90+ countries.</div>
+        <div class="help-card-action">Act → oxfam.org</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="site-footer">
+    <div class="footer-logo">EARTH PULSE</div>
+    <div class="footer-credit">
+      Built by <span>Jermaine</span> · Powered by real data · 2026
+    </div>
+    <div class="footer-links">
+      <a class="footer-link" href="https://github.com/aawbed/earth-pulse" target="_blank">GitHub</a>
+      <a class="footer-link" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Back to Globe ↑</a>
+    </div>
+  </footer>
 
   <!-- THREE.JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

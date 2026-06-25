@@ -26,13 +26,18 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
+html {
+  width: 100%;
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+body {
+  width: 100%;
+  overflow-x: hidden;
+  background: var(--bg);
 }
 
 /* ---- LOADER ---- */
@@ -145,6 +150,13 @@ html, body {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
   display: block;
+  pointer-events: auto;
+}
+
+#globe-section {
+  position: relative;
+  height: 100vh;
+  width: 100%;
 }
 
 /* ---- HERO TEXT ---- */
@@ -610,4 +622,411 @@ html, body {
 .sig-tag {
   color: var(--text-muted);
   text-transform: uppercase;
+}
+/* ---- SCROLL SECTIONS ---- */
+.scroll-section {
+  position: relative;
+  z-index: 10;
+  background: var(--bg);
+  padding: 120px 60px;
+}
+
+.section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-eyebrow::before {
+  content: '';
+  width: 32px; height: 1px;
+  background: var(--accent-cyan);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: 24px;
+}
+
+.section-sub {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  max-width: 560px;
+  margin-bottom: 64px;
+}
+
+/* ---- CATEGORY SHOWCASE ---- */
+#crisis-showcase {
+  background: linear-gradient(to bottom, var(--bg), #060d1f, var(--bg));
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 60px;
+}
+
+.showcase-card {
+  position: relative;
+  padding: 48px 36px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  background: var(--bg-card);
+}
+
+.showcase-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.showcase-card:hover::before { opacity: 1; }
+.showcase-card:hover { transform: translateY(-4px); }
+
+.showcase-card.cat-climate::before { background: linear-gradient(135deg, rgba(0,245,212,0.08), transparent); }
+.showcase-card.cat-hunger::before { background: linear-gradient(135deg, rgba(255,190,11,0.08), transparent); }
+.showcase-card.cat-conflict::before { background: linear-gradient(135deg, rgba(255,64,96,0.08), transparent); }
+.showcase-card.cat-health::before { background: linear-gradient(135deg, rgba(167,139,250,0.08), transparent); }
+.showcase-card.cat-education::before { background: linear-gradient(135deg, rgba(56,189,248,0.08), transparent); }
+.showcase-card.cat-economy::before { background: linear-gradient(135deg, rgba(251,146,60,0.08), transparent); }
+
+.showcase-icon {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.showcase-cat {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.showcase-card.cat-climate .showcase-cat { color: #00f5d4; }
+.showcase-card.cat-hunger .showcase-cat { color: #ffbe0b; }
+.showcase-card.cat-conflict .showcase-cat { color: #ff4060; }
+.showcase-card.cat-health .showcase-cat { color: #a78bfa; }
+.showcase-card.cat-education .showcase-cat { color: #38bdf8; }
+.showcase-card.cat-economy .showcase-cat { color: #fb923c; }
+
+.showcase-heading {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.showcase-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.showcase-stat {
+  margin-top: 24px;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.showcase-card.cat-climate .showcase-stat { color: #00f5d4; }
+.showcase-card.cat-hunger .showcase-stat { color: #ffbe0b; }
+.showcase-card.cat-conflict .showcase-stat { color: #ff4060; }
+.showcase-card.cat-health .showcase-stat { color: #a78bfa; }
+.showcase-card.cat-education .showcase-stat { color: #38bdf8; }
+.showcase-card.cat-economy .showcase-stat { color: #fb923c; }
+
+.showcase-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ---- EARTH HEALTH DASHBOARD ---- */
+#health-dashboard {
+  background: linear-gradient(to bottom, var(--bg), #04091a);
+}
+
+.health-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.health-score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.health-score-ring {
+  position: relative;
+  width: 240px;
+  height: 240px;
+}
+
+.health-score-ring svg {
+  transform: rotate(-90deg);
+}
+
+.health-score-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.health-big-num {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: 800;
+  color: #ff4060;
+  line-height: 1;
+}
+
+.health-big-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.health-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.health-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.health-metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.health-metric-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.health-metric-val {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.health-metric-bar {
+  height: 4px;
+  background: var(--text-dim);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.health-metric-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.5s ease;
+}
+
+/* ---- HOW TO HELP ---- */
+#how-to-help {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 60px;
+}
+
+.help-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 28px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.help-card:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.help-card-icon {
+  font-size: 2rem;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.help-card-org {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.help-card-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.help-card-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.help-card-action {
+  margin-top: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+
+/* ---- FOOTER ---- */
+#site-footer {
+  background: #020509;
+  border-top: 1px solid var(--border);
+  padding: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--accent-cyan);
+  filter: drop-shadow(0 0 8px var(--accent-cyan));
+}
+
+.footer-credit {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.footer-credit span {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-link {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.footer-link:hover { color: var(--accent-cyan); }
+
+/* ---- SCROLL ANIMATIONS ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- SCROLL DOWN HINT ---- */
+.scroll-hint {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+  animation: bounce 2s ease-in-out infinite;
+  pointer-events: none;
+}
+.scroll-hint-text {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.scroll-hint-arrow {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--accent-cyan), transparent);
+}
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+@media (max-width: 768px) {
+  .scroll-section { padding: 80px 24px; }
+  .showcase-grid { grid-template-columns: 1fr; }
+  .health-dashboard-grid { grid-template-columns: 1fr; }
+  .help-grid { grid-template-columns: 1fr; }
+  #site-footer { flex-direction: column; gap: 24px; text-align: center; }
 }
