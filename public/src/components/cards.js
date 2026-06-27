@@ -43,6 +43,15 @@ revealEls.forEach(el => observer.observe(el));
 
 // Hide scroll hint after scrolling
 window.addEventListener('scroll', () => {
+  const hint = document.querySelector('.scroll-hint');
+  if (hint) {
+    hint.style.transition = 'opacity 0.4s ease';
+    hint.style.opacity = window.scrollY > 100 ? '0' : '1';
+  }
+}, { passive: true });
+
+// Hide fixed UI when scrolling past globe
+window.addEventListener('scroll', () => {
   const scrolled = window.scrollY > window.innerHeight * 0.85;
   const ids = ['time-machine', 'bottom-tray', 'hero-text'];
   ids.forEach(id => {
@@ -52,19 +61,4 @@ window.addEventListener('scroll', () => {
     el.style.opacity = scrolled ? '0' : '1';
     el.style.pointerEvents = scrolled ? 'none' : 'auto';
   });
-}, { passive: true });
-
-// Hide fixed UI when scrolling past globe
-window.addEventListener('scroll', () => {
-  const scrolled = window.scrollY > window.innerHeight * 0.8;
-  const timeMachine = document.getElementById('time-machine');
-  const bottomTray = document.getElementById('bottom-tray');
-  const heroText = document.getElementById('hero-text');
-  const nav = document.getElementById('nav');
-
-  if (timeMachine) timeMachine.style.opacity = scrolled ? '0' : '1';
-  if (timeMachine) timeMachine.style.pointerEvents = scrolled ? 'none' : 'auto';
-  if (bottomTray) bottomTray.style.opacity = scrolled ? '0' : '1';
-  if (bottomTray) bottomTray.style.pointerEvents = scrolled ? 'none' : 'auto';
-  if (heroText) heroText.style.opacity = scrolled ? '0' : '1';
 }, { passive: true });
