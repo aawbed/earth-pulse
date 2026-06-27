@@ -43,10 +43,15 @@ revealEls.forEach(el => observer.observe(el));
 
 // Hide scroll hint after scrolling
 window.addEventListener('scroll', () => {
-  const hint = document.querySelector('.scroll-hint');
-  if (hint && window.scrollY > 100) {
-    hint.style.opacity = '0';
-  }
+  const scrolled = window.scrollY > window.innerHeight * 0.85;
+  const ids = ['time-machine', 'bottom-tray', 'hero-text'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.transition = 'opacity 0.4s ease';
+    el.style.opacity = scrolled ? '0' : '1';
+    el.style.pointerEvents = scrolled ? 'none' : 'auto';
+  });
 }, { passive: true });
 
 // Hide fixed UI when scrolling past globe
