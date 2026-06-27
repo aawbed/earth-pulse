@@ -61,4 +61,9 @@ window.addEventListener('scroll', () => {
     el.style.opacity = scrolled ? '0' : '1';
     el.style.pointerEvents = scrolled ? 'none' : 'auto';
   });
+  // Disable globe interaction when scrolled past it
+    const canvas = document.getElementById('globe-canvas');
+  if (canvas) {
+    canvas.style.pointerEvents = scrolled ? 'none' : 'auto';
+  }
 }, { passive: true });
