@@ -263,12 +263,38 @@ canvas.addEventListener('click', e => {
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
+  // Check regular markers first
   const dotMeshes = markers.map(m => m.mesh);
   const hits = raycaster.intersectObjects(dotMeshes);
   if (hits.length > 0) {
-    const hit = hits[0].object;
-    const marker = markers.find(m => m.mesh === hit);
-    if (marker) openPanel(marker.prob);
+    const marker = markers.find(m => m.mesh === hits[0].object);
+    if (marker) { openPanel(marker.prob); return; }
+  }
+
+  // Check EONET markers
+  const eonetDots = eonetMarkers.map(m => m.dot);
+  const eonetHits = raycaster.intersectObjects(eonetDots);
+  if (eonetHits.length > 0) {
+    const m = eonetMarkers.find(m => m.dot === eonetHits[0].object);
+    if (m) {
+      // Show tooltip with live event info
+      const region = Array.isArray(m.event.coordinates)
+        ? `${m.event.coordinates[0].toFixed(2)}, ${m.event.coordinates[1].toFixed(2)}`
+        : '';
+      openPanel({
+        title: m.event.title,
+        category: 'climate',
+        regions: [region],
+        coordinates: m.event.coordinates,
+        description: `🛰️ LIVE NASA EVENT — ${m.event.category} detected on ${new Date(m.event.date).toLocaleDateString()}. This is a real-time natural event tracked by NASA Earth Observatory.`,
+        stat: m.event.category,
+        affected: null,
+        severity: 8,
+        ripples: [],
+        actions: ['Monitor updates at nasa.gov/eonet', 'Support disaster relief organizations', 'Follow local emergency services guidance'],
+        icon: m.event.category === 'Wildfires' ? '🔥' : m.event.category === 'Severe Storms' ? '🌪️' : m.event.category === 'Volcanoes' ? '🌋' : '⚠️'
+      });
+    }
   }
 });
 
@@ -344,6 +370,17 @@ function animate() {
     l.group.rotation.copy(globe.rotation);
   });
 
+  // Animate EONET live markers
+  eonetMarkers.forEach(m => {
+    const pulse = Math.sin(t * 3 + m.pulseT);
+    m.mat.opacity = 0.5 + 0.4 * ((pulse + 1) / 2);
+    m.outerMat.opacity = 0.1 + 0.2 * ((pulse + 1) / 2);
+    const s = 1 + 0.4 * ((pulse + 1) / 2);
+    m.ring.scale.setScalar(s);
+    m.outer.scale.setScalar(s);
+    m.group.rotation.copy(globe.rotation);
+  });
+
   // Atmosphere pulse
   atmosphere.material.opacity = 0.06 + 0.02 * Math.sin(t * 0.8);
 
@@ -365,8 +402,77 @@ yearSlider.addEventListener('input', () => {
   // Future: filter problem visibility by year
 });
 
+// ---- NASA EONET Live Events ----
+let eonetMarkers = [];
+
+const eonetColors = {
+  'Wildfires': 0xff4500,
+  'Severe Storms': 0x00aaff,
+  'Volcanoes': 0xff6600,
+  'Floods': 0x0044ff,
+  'Sea and Lake Ice': 0x88eeff,
+  'Natural Event': 0xffffff,
+};
+
+async function loadEonetEvents() {
+  try {
+    const res = await fetch('/api/eonet');
+    const data = await res.json();
+    if (!data.events) return;
+
+    data.events.forEach(event => {
+      const color = eonetColors[event.category] || 0xffffff;
+      const lat = event.coordinates[0];
+      const lon = event.coordinates[1];
+      const pos = latLonToVec3(lat, lon, 1.02);
+
+      // Outer glow ring — bigger and more dramatic than regular markers
+      const ringGeo = new THREE.RingGeometry(0.03, 0.05, 16);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color, side: THREE.DoubleSide, transparent: true, opacity: 0.8
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(pos);
+      ring.lookAt(new THREE.Vector3(0, 0, 0));
+
+      // Inner dot
+      const dotGeo = new THREE.SphereGeometry(0.012, 8, 8);
+      const dotMat = new THREE.MeshBasicMaterial({ color });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.copy(pos);
+
+      // LIVE label ring — extra outer pulse
+      const outerGeo = new THREE.RingGeometry(0.055, 0.065, 16);
+      const outerMat = new THREE.MeshBasicMaterial({
+        color, side: THREE.DoubleSide, transparent: true, opacity: 0.3
+      });
+      const outer = new THREE.Mesh(outerGeo, outerMat);
+      outer.position.copy(pos);
+      outer.lookAt(new THREE.Vector3(0, 0, 0));
+
+      const group = new THREE.Group();
+      group.add(dot);
+      group.add(ring);
+      group.add(outer);
+      scene.add(group);
+
+      eonetMarkers.push({
+        group, dot, ring, outer, event,
+        basePos: pos.clone(),
+        pulseT: Math.random() * Math.PI * 2,
+        mat: ringMat, outerMat
+      });
+    });
+
+    console.log(`🛰️ NASA EONET: ${data.events.length} live events loaded`);
+  } catch (err) {
+    console.error('EONET load failed:', err);
+  }
+}
+
 // ---- Boot ----
 loadProblems();
+loadEonetEvents();
 animate();
 
 // Loader fade
