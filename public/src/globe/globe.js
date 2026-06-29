@@ -268,7 +268,7 @@ canvas.addEventListener('click', e => {
   const hits = raycaster.intersectObjects(dotMeshes);
   if (hits.length > 0) {
     const marker = markers.find(m => m.mesh === hits[0].object);
-    if (marker) { openPanel(marker.prob); return; }
+    if (marker) { openPanel(marker.prob); zoomToMarker(marker.basePos); return; }
   }
 
   // Check EONET markers
@@ -528,6 +528,22 @@ export function clearRippleLines() {
   const targetMarker = markers.find(m => m.prob.id === prob.id);
   if (!targetMarker) return;
   openPanel(prob);
+}
+
+// ---- Cinematic zoom ----
+function zoomToMarker(targetPos) {
+  const startZ = camera.position.z;
+  const targetZ = 1.8;
+  const duration = 1000;
+  const start = performance.now();
+
+  function animateZoom(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    camera.position.z = startZ + (targetZ - startZ) * ease;
+    if (t < 1) requestAnimationFrame(animateZoom);
+  }
+  requestAnimationFrame(animateZoom);
 }
 
 // Expose to panel
