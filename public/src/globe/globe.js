@@ -397,9 +397,44 @@ window.addEventListener('resize', () => {
 // ---- Time machine ----
 const yearSlider = document.getElementById('year-slider');
 const tmYear = document.getElementById('tm-year');
+// Year each crisis category became prominent
+const crisisYears = {
+  'climate-001': 2000, 'climate-002': 2019, 'climate-003': 1995,
+  'climate-004': 2000, 'climate-005': 2010,
+  'hunger-001': 2008, 'hunger-002': 1990, 'hunger-003': 2011,
+  'hunger-004': 2000, 'hunger-005': 2015,
+  'conflict-001': 2011, 'conflict-002': 2022, 'conflict-003': 2015,
+  'conflict-004': 1990, 'conflict-005': 2014,
+  'health-001': 2019, 'health-002': 2000, 'health-003': 1990,
+  'health-004': 2010, 'health-005': 2005,
+  'education-001': 1995, 'education-002': 1990, 'education-003': 2000,
+  'education-004': 1995, 'education-005': 2015,
+  'economy-001': 1990, 'economy-002': 2008, 'economy-003': 1995,
+  'economy-004': 2000, 'economy-005': 2010,
+};
+
 yearSlider.addEventListener('input', () => {
-  tmYear.textContent = yearSlider.value;
-  // Future: filter problem visibility by year
+  const year = parseInt(yearSlider.value);
+  tmYear.textContent = year;
+
+  // Filter markers by year
+  markers.forEach(m => {
+    const crisisYear = crisisYears[m.prob.id] || 1990;
+    const visible = crisisYear <= year;
+    m.group.visible = visible;
+  });
+
+  // Update active crises count
+  const visibleCount = markers.filter(m => {
+    const crisisYear = crisisYears[m.prob.id] || 1990;
+    return crisisYear <= parseInt(yearSlider.value);
+  }).length;
+
+  const statEl = document.getElementById('stat-problems');
+  if (statEl) statEl.textContent = visibleCount;
+
+  // Flash the year display
+  tmYear.style.color = year < 2026 ? '#ffbe0b' : '#00f5d4';
 });
 
 // ---- NASA EONET Live Events ----
