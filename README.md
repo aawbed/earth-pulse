@@ -24,7 +24,7 @@
 - **🌡️ Real-Time Climate Conditions (`/api/climate`):**
   - Queries Open-Meteo for live temperature, wind speed, and 7-day cumulative precipitation at any crisis or hazard coordinate.
 - **📰 Regional Crisis News Feed (`/api/news`):**
-  - Fetches live, region-scoped reporting via GNews API v4 with automatic crisis-context fallback.
+  - Fetches live, region-scoped reporting via GNews API v4 with automatic Google News RSS fallback and Edge caching (works out-of-the-box even without a `GNEWS_API_KEY`).
 - **🤖 "Ask the Globe" AI Analyst (`/api/ask-globe`):**
   - Powered by **GPT-OSS 120B** on Groq (with automatic multi-model fallback) — answers user questions grounded in the active crisis's metrics, severity, and affected regions.
 - **⏳ Time Machine (1990 – 2026) & Country Jump:**
@@ -79,7 +79,7 @@ cp .env.example .env
 | Variable | Required | Description |
 | :--- | :---: | :--- |
 | `GROQ_API_KEY` | Yes (for AI) | API key from [console.groq.com](https://console.groq.com) for *Ask the Globe* |
-| `GNEWS_API_KEY` | Optional | API key from [gnews.io](https://gnews.io) for *Latest News* *(NASA EONET & Open-Meteo require no keys)* |
+| `GNEWS_API_KEY` | Optional | API key from [gnews.io](https://gnews.io) for *Latest News* (falls back to Google News RSS if omitted; *NASA EONET & Open-Meteo require no keys*) |
 
 ### 3. Start the local full-stack dev server
 
