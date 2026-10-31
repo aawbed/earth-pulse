@@ -39,9 +39,14 @@
       <button class="nav-btn" data-filter="education">Education</button>
       <button class="nav-btn" data-filter="economy">Economy</button>
     </div>
-    <div class="nav-live">
-      <span class="pulse-dot"></span>
-      LIVE
+    <div class="nav-right">
+      <select id="country-select" class="country-select" aria-label="Jump to country">
+        <option value="">🌍 Jump to Country</option>
+      </select>
+      <div class="nav-live" title="NASA EONET + Open-Meteo Live Telemetry">
+        <span class="pulse-dot"></span>
+        LIVE
+      </div>
     </div>
   </nav>
 
@@ -63,8 +68,10 @@
         <span class="stat-label">People Affected</span>
       </div>
       <div class="stat-item earth-health">
-        <span class="stat-num health-score" id="stat-health">42</span>
-        <span class="stat-label">Earth Health Score</span>
+        <div class="earth-health-row">
+          <span class="stat-num health-score" id="stat-health">42</span>
+          <span class="stat-label">Earth Health Score</span>
+        </div>
         <div class="health-bar">
           <div class="health-fill" id="health-fill"></div>
         </div>
@@ -76,20 +83,20 @@
   <canvas id="globe-canvas"></canvas>
 
   <!-- SIDE PANEL -->
-  <div id="side-panel" class="panel-closed">
-    <button id="panel-close">✕</button>
+  <div id="side-panel" class="panel-closed" aria-hidden="true">
+    <button id="panel-close" aria-label="Close crisis panel">✕</button>
     <div class="panel-category" id="panel-category"></div>
     <h2 class="panel-title" id="panel-title"></h2>
     <div class="panel-location" id="panel-location">
       <span class="panel-flag" id="panel-flag"></span>
-      <span id="panel-region"></span>
+      <div class="panel-regions" id="panel-region"></div>
     </div>
 
     <div class="panel-stats-row" id="panel-stats-row"></div>
 
     <p class="panel-description" id="panel-description"></p>
 
-    <div class="panel-section">
+    <div class="panel-section" id="ripple-section">
       <h4>RIPPLE EFFECTS</h4>
       <div class="ripple-tags" id="ripple-tags"></div>
     </div>
@@ -98,11 +105,12 @@
       <h4>WHAT YOU CAN DO</h4>
       <div class="actions-list" id="actions-list"></div>
     </div>
-     <div class="panel-section">
+
+    <div class="panel-section">
       <h4>🌡️ LIVE CONDITIONS</h4>
       <div id="climate-data" class="climate-data"></div>
     </div>
- 
+
     <div class="panel-section">
       <h4>📰 LATEST NEWS</h4>
       <div id="news-feed" class="news-feed"></div>
@@ -111,8 +119,8 @@
     <div class="panel-section ai-section">
       <h4>ASK THE GLOBE</h4>
       <div class="ai-input-row">
-        <input type="text" id="ai-input" placeholder="Ask anything about this crisis..." />
-        <button id="ai-send">→</button>
+        <input type="text" id="ai-input" maxlength="500" placeholder="Ask anything about this crisis..." />
+        <button id="ai-send" aria-label="Ask AI analyst">→</button>
       </div>
       <div class="ai-response" id="ai-response"></div>
     </div>
@@ -122,13 +130,13 @@
     </button>
   </div>
 
-  <!-- RIPPLE MODAL (connection lines label) -->
+  <!-- RIPPLE & GLOBE TOOLTIP -->
   <div id="tooltip" class="globe-tooltip hidden"></div>
 
   <!-- TIME MACHINE -->
   <div id="time-machine">
     <span class="tm-label">TIME MACHINE</span>
-    <input type="range" id="year-slider" min="1990" max="2026" value="2026" step="1" />
+    <input type="range" id="year-slider" min="1990" max="2026" value="2026" step="1" aria-label="Filter crises by year" />
     <span class="tm-year" id="tm-year">2026</span>
   </div>
 
@@ -138,17 +146,16 @@
   </div>
 
   <!-- CREATOR SIGNATURE -->
-<div id="creator-sig">
-  <span class="sig-built">Built by</span>
-  <span class="sig-name">Jermaine Obed</span>
-  <span class="sig-dot">·</span>
-  <span class="sig-tag">Earth Pulse 2026</span>
-</div>
+  <div id="creator-sig">
+    <span class="sig-built">Built by</span>
+    <span class="sig-name">Jermaine Obed</span>
+    <span class="sig-dot">·</span>
+    <span class="sig-tag">Earth Pulse 2026</span>
+  </div>
 
-<!-- SCROLL SECTIONS -->
-<div style="height:100vh;width:100%;display:block;position:relative;z-index:10;pointer-events:none;"></div>
-  <!-- Scroll hint -->
-  <div class="scroll-hint" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:20;">
+  <!-- SCROLL SPACER & HINT -->
+  <div class="globe-spacer"></div>
+  <div class="scroll-hint">
     <span class="scroll-hint-text">Scroll to explore</span>
     <div class="scroll-hint-arrow"></div>
   </div>
@@ -157,10 +164,10 @@
   <section class="scroll-section" id="crisis-showcase">
     <div class="section-eyebrow">The Crisis Index</div>
     <h2 class="section-title reveal">Six categories.<br/>One planet in crisis.</h2>
-    <p class="section-sub reveal">Every glowing point on the globe belongs to one of six interconnected crisis categories. They don't exist in isolation — pull one thread and the whole world feels it.</p>
+    <p class="section-sub reveal">Every glowing point on the globe belongs to one of six interconnected crisis categories. Click any category below to filter the 3D globe directly.</p>
 
     <div class="showcase-grid">
-      <div class="showcase-card cat-climate reveal">
+      <div class="showcase-card cat-climate reveal" data-category="climate" role="button" tabindex="0">
         <span class="showcase-icon">🌡️</span>
         <div class="showcase-cat">Climate</div>
         <div class="showcase-heading">The planet is overheating</div>
@@ -168,7 +175,7 @@
         <div class="showcase-stat">1.2°C</div>
         <div class="showcase-stat-label">Above pre-industrial average</div>
       </div>
-      <div class="showcase-card cat-hunger reveal">
+      <div class="showcase-card cat-hunger reveal" data-category="hunger" role="button" tabindex="0">
         <span class="showcase-icon">🌾</span>
         <div class="showcase-cat">Hunger</div>
         <div class="showcase-heading">733 million go to bed hungry</div>
@@ -176,7 +183,7 @@
         <div class="showcase-stat">733M</div>
         <div class="showcase-stat-label">People facing hunger daily</div>
       </div>
-      <div class="showcase-card cat-conflict reveal">
+      <div class="showcase-card cat-conflict reveal" data-category="conflict" role="button" tabindex="0">
         <span class="showcase-icon">⚔️</span>
         <div class="showcase-cat">Conflict</div>
         <div class="showcase-heading">117M displaced worldwide</div>
@@ -184,7 +191,7 @@
         <div class="showcase-stat">117M</div>
         <div class="showcase-stat-label">Forcibly displaced people</div>
       </div>
-      <div class="showcase-card cat-health reveal">
+      <div class="showcase-card cat-health reveal" data-category="health" role="button" tabindex="0">
         <span class="showcase-icon">🏥</span>
         <div class="showcase-cat">Health</div>
         <div class="showcase-heading">Half the world lacks basic care</div>
@@ -192,7 +199,7 @@
         <div class="showcase-stat">4.5B</div>
         <div class="showcase-stat-label">Without essential health services</div>
       </div>
-      <div class="showcase-card cat-education reveal">
+      <div class="showcase-card cat-education reveal" data-category="education" role="button" tabindex="0">
         <span class="showcase-icon">📚</span>
         <div class="showcase-cat">Education</div>
         <div class="showcase-heading">244M children out of school</div>
@@ -200,13 +207,13 @@
         <div class="showcase-stat">244M</div>
         <div class="showcase-stat-label">Children out of school globally</div>
       </div>
-      <div class="showcase-card cat-economy reveal">
+      <div class="showcase-card cat-economy reveal" data-category="economy" role="button" tabindex="0">
         <span class="showcase-icon">💰</span>
         <div class="showcase-cat">Economy</div>
         <div class="showcase-heading">The gap keeps widening</div>
-        <div class="showcase-desc">The world's richest 1% own more wealth than the bottom 95% combined. Inequality is accelerating, not slowing.</div>
-        <div class="showcase-stat">1%</div>
-        <div class="showcase-stat-label">Own more than the bottom 95%</div>
+        <div class="showcase-desc">The world's richest 1% own 45% of global wealth — more than the bottom 95% combined. Inequality is accelerating, not slowing.</div>
+        <div class="showcase-stat">45%</div>
+        <div class="showcase-stat-label">Global wealth owned by top 1%</div>
       </div>
     </div>
   </section>
@@ -215,7 +222,7 @@
   <section class="scroll-section" id="health-dashboard">
     <div class="section-eyebrow">Earth Health Score</div>
     <h2 class="section-title reveal">The planet's vital signs,<br/><em style="font-style:normal;-webkit-text-fill-color:transparent;-webkit-text-stroke:1.5px #ff4060;">in critical condition.</em></h2>
-    <p class="section-sub reveal">We score Earth's health across six dimensions. 100 means thriving. Right now, we're at 42 — and falling.</p>
+    <p class="section-sub reveal">We score Earth's health across six dimensions. 100 means thriving. Right now, our composite mean stands at 42 — and falling.</p>
 
     <div class="health-dashboard-grid reveal">
       <div class="health-score-display">
@@ -240,55 +247,55 @@
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">🌡️ Climate Stability</span>
-            <span class="health-metric-val" style="color:#00f5d4">31/100</span>
+            <span class="health-metric-val" style="color:#00f5d4">36/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:31%;background:#00f5d4;"></div>
+            <div class="health-metric-fill" style="width:36%;background:#00f5d4;"></div>
           </div>
         </div>
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">🌾 Food Security</span>
-            <span class="health-metric-val" style="color:#ffbe0b">38/100</span>
+            <span class="health-metric-val" style="color:#ffbe0b">40/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:38%;background:#ffbe0b;"></div>
+            <div class="health-metric-fill" style="width:40%;background:#ffbe0b;"></div>
           </div>
         </div>
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">⚔️ Peace Index</span>
-            <span class="health-metric-val" style="color:#ff4060">29/100</span>
+            <span class="health-metric-val" style="color:#ff4060">31/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:29%;background:#ff4060;"></div>
+            <div class="health-metric-fill" style="width:31%;background:#ff4060;"></div>
           </div>
         </div>
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">🏥 Global Health</span>
-            <span class="health-metric-val" style="color:#a78bfa">55/100</span>
+            <span class="health-metric-val" style="color:#a78bfa">58/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:55%;background:#a78bfa;"></div>
+            <div class="health-metric-fill" style="width:58%;background:#a78bfa;"></div>
           </div>
         </div>
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">📚 Education Access</span>
-            <span class="health-metric-val" style="color:#38bdf8">48/100</span>
+            <span class="health-metric-val" style="color:#38bdf8">52/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:48%;background:#38bdf8;"></div>
+            <div class="health-metric-fill" style="width:52%;background:#38bdf8;"></div>
           </div>
         </div>
         <div class="health-metric">
           <div class="health-metric-header">
             <span class="health-metric-name">💰 Economic Equality</span>
-            <span class="health-metric-val" style="color:#fb923c">22/100</span>
+            <span class="health-metric-val" style="color:#fb923c">35/100</span>
           </div>
           <div class="health-metric-bar">
-            <div class="health-metric-fill" style="width:22%;background:#fb923c;"></div>
+            <div class="health-metric-fill" style="width:35%;background:#fb923c;"></div>
           </div>
         </div>
       </div>
@@ -302,42 +309,42 @@
     <p class="section-sub reveal">These organizations are on the ground, doing the work. Every contribution — time, money, or attention — moves the needle.</p>
 
     <div class="help-grid">
-      <a class="help-card reveal" href="https://www.unhcr.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.unhcr.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">🏕️</span>
         <div class="help-card-org">UNHCR</div>
         <div class="help-card-title">Protect displaced people</div>
         <div class="help-card-desc">The UN Refugee Agency provides life-saving assistance to 117 million forcibly displaced people worldwide.</div>
         <div class="help-card-action">Donate → unhcr.org</div>
       </a>
-      <a class="help-card reveal" href="https://www.wfp.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.wfp.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">🌾</span>
         <div class="help-card-org">World Food Programme</div>
         <div class="help-card-title">End hunger now</div>
         <div class="help-card-desc">WFP is the world's largest humanitarian organization fighting hunger and promoting food security globally.</div>
         <div class="help-card-action">Donate → wfp.org</div>
       </a>
-      <a class="help-card reveal" href="https://www.doctorswithoutborders.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.doctorswithoutborders.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">🏥</span>
         <div class="help-card-org">Médecins Sans Frontières</div>
         <div class="help-card-title">Bring medicine to crisis zones</div>
         <div class="help-card-desc">MSF delivers emergency medical care to people affected by conflict, epidemics, and disasters in 70+ countries.</div>
         <div class="help-card-action">Donate → msf.org</div>
       </a>
-      <a class="help-card reveal" href="https://www.climatereality.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.climatereality.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">🌍</span>
         <div class="help-card-org">Climate Reality Project</div>
         <div class="help-card-title">Fight the climate crisis</div>
         <div class="help-card-desc">Founded by Al Gore, this organization trains climate activists and drives policy change across 175+ countries.</div>
         <div class="help-card-action">Join → climatereality.org</div>
       </a>
-      <a class="help-card reveal" href="https://www.unicef.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.unicef.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">📚</span>
         <div class="help-card-org">UNICEF</div>
         <div class="help-card-title">Give every child a future</div>
         <div class="help-card-desc">UNICEF works in 190 countries to protect children's rights to education, health, and safety from harm.</div>
         <div class="help-card-action">Donate → unicef.org</div>
       </a>
-      <a class="help-card reveal" href="https://www.oxfam.org" target="_blank" rel="noopener">
+      <a class="help-card reveal" href="https://www.oxfam.org" target="_blank" rel="noopener noreferrer">
         <span class="help-card-icon">⚖️</span>
         <div class="help-card-org">Oxfam</div>
         <div class="help-card-title">Fight inequality at the root</div>
@@ -354,8 +361,8 @@
       Built by <span>Jermaine Obed</span> · Powered by real data · 2026
     </div>
     <div class="footer-links">
-      <a class="footer-link" href="https://github.com/aawbed" target="_blank">GitHub</a>
-      <a class="footer-link" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">Back to Globe ↑</a>
+      <a class="footer-link" href="https://github.com/aawbed/earth-pulse" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a class="footer-link" href="#top" id="back-to-globe">Back to Globe ↑</a>
     </div>
   </footer>
 

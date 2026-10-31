@@ -1,13 +1,19 @@
 // ================================
-// EARTH PULSE — Cards (minimal)
-// Tray is populated in globe.js
-// This handles any extra card logic
+// EARTH PULSE — Cards, Counters & Scroll Interactions
 // ================================
 
-// Animate stat counters on load
+// Animate Hero stat counters & Earth Health Score bar on load
 window.addEventListener('load', () => {
   animateCounter('stat-problems', 0, 30, 1800);
   animateCounter('stat-countries', 0, 195, 2000);
+  animateCounter('stat-health', 0, 42, 1900);
+
+  const healthFill = document.getElementById('health-fill');
+  if (healthFill) {
+    requestAnimationFrame(() => {
+      healthFill.style.width = '42%';
+    });
+  }
 });
 
 function animateCounter(id, from, to, duration) {
@@ -23,6 +29,32 @@ function animateCounter(id, from, to, duration) {
 }
 
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// Interactive Category Showcase Cards -> scroll to globe & apply filter
+document.querySelectorAll('.showcase-card[data-category]').forEach(card => {
+  const triggerFilter = () => {
+    const category = card.dataset.category;
+    window.__globeModule?.setFilter?.(category);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  card.addEventListener('click', triggerFilter);
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      triggerFilter();
+    }
+  });
+});
+
+// Footer "Back to Globe" smooth scroll
+const backToGlobe = document.getElementById('back-to-globe');
+if (backToGlobe) {
+  backToGlobe.addEventListener('click', e => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
 
 // Creator signature auto-hide
 setTimeout(() => {
@@ -41,17 +73,14 @@ const observer = new IntersectionObserver((entries) => {
 }, { threshold: 0.15 });
 revealEls.forEach(el => observer.observe(el));
 
-// Hide scroll hint after scrolling
+// Hide scroll hint & fixed globe HUD when scrolling into editorial sections
 window.addEventListener('scroll', () => {
   const hint = document.querySelector('.scroll-hint');
   if (hint) {
     hint.style.transition = 'opacity 0.4s ease';
     hint.style.opacity = window.scrollY > 100 ? '0' : '1';
   }
-}, { passive: true });
 
-// Hide fixed UI when scrolling past globe
-window.addEventListener('scroll', () => {
   const scrolled = window.scrollY > window.innerHeight * 0.85;
   const ids = ['time-machine', 'bottom-tray', 'hero-text'];
   ids.forEach(id => {
@@ -61,8 +90,12 @@ window.addEventListener('scroll', () => {
     el.style.opacity = scrolled ? '0' : '1';
     el.style.pointerEvents = scrolled ? 'none' : 'auto';
   });
-  // Disable globe interaction when scrolled past it
-    const canvas = document.getElementById('globe-canvas');
+
+  const tooltip = document.getElementById('tooltip');
+  if (tooltip && scrolled) tooltip.classList.add('hidden');
+
+  // Disable globe interaction when scrolled past it so footer/cards stay clickable
+  const canvas = document.getElementById('globe-canvas');
   if (canvas) {
     canvas.style.pointerEvents = scrolled ? 'none' : 'auto';
   }

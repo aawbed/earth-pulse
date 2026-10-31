@@ -1,6 +1,6 @@
 // ================================
 // EARTH PULSE — Globe Engine
-// Three.js 3D rotating globe
+// Three.js 3D rotating globe + GSAP camera flight
 // ================================
 
 import { openPanel } from '../components/panel.js';
@@ -16,6 +16,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 2.8;
+
+const MAX_TILT = Math.PI * 0.42;
 
 // ---- Lighting ----
 const ambientLight = new THREE.AmbientLight(0x1a2a4a, 2.5);
@@ -62,22 +64,35 @@ const atmMat = new THREE.MeshPhongMaterial({
 const atmosphere = new THREE.Mesh(atmGeo, atmMat);
 scene.add(atmosphere);
 
-// ---- Grid lines ----
+// ---- Helper: lat/lon → Vector3 ----
+function latLonToVec3(lat, lon, radius = 1) {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// ---- Grid lines (grouped so they rotate with the globe) ----
+const gridGroup = new THREE.Group();
 const gridMat = new THREE.LineBasicMaterial({ color: 0x00f5d4, transparent: true, opacity: 0.06 });
 for (let lat = -80; lat <= 80; lat += 20) {
   const pts = [];
   for (let lon = 0; lon <= 360; lon += 2) {
     pts.push(latLonToVec3(lat, lon, 1.002));
   }
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+  gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
 }
 for (let lon = 0; lon < 360; lon += 20) {
   const pts = [];
   for (let lat = -90; lat <= 90; lat += 2) {
     pts.push(latLonToVec3(lat, lon, 1.002));
   }
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
+  gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat));
 }
+scene.add(gridGroup);
 
 // ---- Stars ----
 const starGeo = new THREE.BufferGeometry();
@@ -96,17 +111,6 @@ starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions,
 const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.018, transparent: true, opacity: 0.7 });
 scene.add(new THREE.Points(starGeo, starMat));
 
-// ---- Helper: lat/lon → Vector3 ----
-function latLonToVec3(lat, lon, radius = 1) {
-  const phi = (90 - lat) * (Math.PI / 180);
-  const theta = (lon + 180) * (Math.PI / 180);
-  return new THREE.Vector3(
-    -radius * Math.sin(phi) * Math.cos(theta),
-    radius * Math.cos(phi),
-    radius * Math.sin(phi) * Math.sin(theta)
-  );
-}
-
 // ---- Category colors ----
 const catColors = {
   climate:   0x00f5d4,
@@ -117,66 +121,111 @@ const catColors = {
   economy:   0xfb923c,
 };
 
-// ---- Load problems & create markers ----
-let problems = [];
-let markers = [];
-let activeFilter = 'all';
-let rippleLines = [];
+// Fallback year map if problem.year is absent
+const crisisYears = {
+  'climate-001': 2000, 'climate-002': 2019, 'climate-003': 1995,
+  'climate-004': 2000, 'climate-005': 2010,
+  'hunger-001': 2008, 'hunger-002': 1990, 'hunger-003': 2011,
+  'hunger-004': 2000, 'hunger-005': 2015,
+  'conflict-001': 2011, 'conflict-002': 2022, 'conflict-003': 2015,
+  'conflict-004': 1990, 'conflict-005': 2014,
+  'health-001': 2019, 'health-002': 2000, 'health-003': 1990,
+  'health-004': 2010, 'health-005': 2005,
+  'education-001': 1995, 'education-002': 1990, 'education-003': 2000,
+  'education-004': 1995, 'education-005': 2015,
+  'economy-001': 1990, 'economy-002': 2008, 'economy-003': 1995,
+  'economy-004': 2000, 'economy-005': 2010,
+};
 
+// ---- State ----
+let problems = [];
+let countries = [];
+let markers = [];
+let countryMarkers = [];
+let eonetMarkers = [];
+let rippleLines = [];
+let activeFilter = 'all';
+let activeYear = 2026;
+let selectedProblemId = null;
+let isPanelOpen = false;
+let isFlying = false;
+
+function disposeGroup(group) {
+  group.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+      else obj.material.dispose();
+    }
+  });
+  scene.remove(group);
+}
+
+function getCrisisYear(prob) {
+  return prob.year || crisisYears[prob.id] || 1990;
+}
+
+function isProblemVisible(prob) {
+  const catMatch = activeFilter === 'all' || prob.category === activeFilter;
+  const yearMatch = getCrisisYear(prob) <= activeYear;
+  return catMatch && yearMatch;
+}
+
+// ---- Load problems & countries ----
 async function loadProblems() {
   try {
-    const res = await fetch('/src/data/problems.json');
+    const res = await fetch('./src/data/problems.json');
     const data = await res.json();
-    // Handle both {problems: [...]} and plain array
     problems = Array.isArray(data) ? data : (data.problems || []);
     if (problems.length === 0) {
       console.warn('No problems loaded — check problems.json structure');
     }
     createMarkers();
-    populateTray();
+    applyFilters(false);
   } catch (err) {
     console.error('Failed to load problems.json:', err);
   }
 }
 
+async function loadCountries() {
+  try {
+    const res = await fetch('./src/data/countries.json');
+    const data = await res.json();
+    countries = Array.isArray(data) ? data : (data.countries || []);
+    createCountryMarkers();
+    populateCountrySelect();
+  } catch (err) {
+    console.error('Failed to load countries.json:', err);
+  }
+}
+
 function createMarkers() {
-  // Clear existing
-  markers.forEach(m => {
-    m.group.remove(m.mesh);
-    m.group.remove(m.ring);
-    scene.remove(m.group);
-  });
+  markers.forEach(m => disposeGroup(m.group));
   markers = [];
 
-  const filtered = activeFilter === 'all'
-    ? problems
-    : problems.filter(p => p.category === activeFilter);
+  problems.forEach(prob => {
+    const catColor = catColors[prob.category] || 0xffffff;
+    const customColor = prob.color ? new THREE.Color(prob.color) : new THREE.Color(catColor);
 
-  filtered.forEach(prob => {
-    const color = catColors[prob.category] || 0xffffff;
-
-    // Get coordinates from array format [lat, lon]
     const lat = Array.isArray(prob.coordinates) ? prob.coordinates[0] : prob.coordinates.lat;
     const lon = Array.isArray(prob.coordinates) ? prob.coordinates[1] : prob.coordinates.lon;
-
     const pos = latLonToVec3(lat, lon, 1.02);
 
-    // Inner dot
-    const dotGeo = new THREE.SphereGeometry(0.018, 8, 8);
-    const dotMat = new THREE.MeshBasicMaterial({ color });
+    // Inner dot uses per-crisis accent blended with category glow
+    const dotGeo = new THREE.SphereGeometry(0.018, 12, 12);
+    const dotMat = new THREE.MeshBasicMaterial({ color: customColor });
     const dot = new THREE.Mesh(dotGeo, dotMat);
     dot.position.copy(pos);
 
-    // Outer pulse ring
-    const ringGeo = new THREE.RingGeometry(0.025, 0.038, 16);
+    // Outer pulse ring uses category color for instant visual grouping
+    const ringGeo = new THREE.RingGeometry(0.025, 0.039, 20);
     const ringMat = new THREE.MeshBasicMaterial({
-      color, side: THREE.DoubleSide, transparent: true, opacity: 0.6
+      color: catColor, side: THREE.DoubleSide, transparent: true, opacity: 0.65
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.copy(pos);
     ring.lookAt(new THREE.Vector3(0, 0, 0));
 
-    // Group dot + ring so they rotate together with the globe
     const group = new THREE.Group();
     group.add(dot);
     group.add(ring);
@@ -187,47 +236,195 @@ function createMarkers() {
       ring,
       group,
       prob,
+      lat,
+      lon,
       basePos: pos.clone(),
       pulseT: Math.random() * Math.PI * 2
     });
   });
 }
 
+function createCountryMarkers() {
+  countryMarkers.forEach(cm => disposeGroup(cm.group));
+  countryMarkers = [];
+
+  countries.forEach(country => {
+    const pos = latLonToVec3(country.lat, country.lon, 1.008);
+    const dotGeo = new THREE.SphereGeometry(0.0065, 8, 8);
+    const dotMat = new THREE.MeshBasicMaterial({
+      color: 0x00f5d4,
+      transparent: true,
+      opacity: 0.35
+    });
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(pos);
+
+    const group = new THREE.Group();
+    group.add(dot);
+    scene.add(group);
+
+    countryMarkers.push({ group, dot, country });
+  });
+}
+
+function populateCountrySelect() {
+  const select = document.getElementById('country-select');
+  if (!select) return;
+
+  const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
+  select.innerHTML = `<option value="">🌍 Jump to Country (${sorted.length})</option>`;
+  sorted.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.code;
+    opt.textContent = `${c.flag} ${c.name}`;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener('change', () => {
+    const code = select.value;
+    if (!code) return;
+    const country = countries.find(c => c.code === code);
+    if (country) flyToCountry(country);
+  });
+}
+
 function populateTray() {
   const tray = document.getElementById('tray-scroll');
+  if (!tray) return;
   tray.innerHTML = '';
-  const filtered = activeFilter === 'all' ? problems : problems.filter(p => p.category === activeFilter);
-  filtered.forEach(prob => {
+
+  const visibleProblems = problems.filter(isProblemVisible);
+  visibleProblems.forEach(prob => {
     const hex = '#' + (catColors[prob.category] || 0xffffff).toString(16).padStart(6, '0');
     const card = document.createElement('div');
-    card.className = 'tray-card';
-    card.innerHTML = `
-      <div class="tray-card-dot" style="background:${hex};box-shadow:0 0 8px ${hex}"></div>
-      <div>
-        <div class="tray-card-title">${prob.title}</div>
-        <div class="tray-card-region">${Array.isArray(prob.regions) ? prob.regions[0] : prob.region}</div>
-      </div>
-    `;
-    card.addEventListener('click', () => openPanel(prob));
+    card.className = 'tray-card' + (prob.id === selectedProblemId ? ' active' : '');
+    card.dataset.problemId = prob.id;
+
+    const dot = document.createElement('div');
+    dot.className = 'tray-card-dot';
+    dot.style.background = hex;
+    dot.style.boxShadow = `0 0 8px ${hex}`;
+
+    const textWrap = document.createElement('div');
+    const titleEl = document.createElement('div');
+    titleEl.className = 'tray-card-title';
+    titleEl.textContent = prob.title;
+
+    const regionName = Array.isArray(prob.regions) ? prob.regions[0] : prob.region;
+    const matchedCountry = findCountryByName(regionName);
+    const regionEl = document.createElement('div');
+    regionEl.className = 'tray-card-region';
+    regionEl.textContent = matchedCountry ? `${matchedCountry.flag} ${regionName}` : regionName;
+
+    textWrap.appendChild(titleEl);
+    textWrap.appendChild(regionEl);
+    card.appendChild(dot);
+    card.appendChild(textWrap);
+
+    card.addEventListener('click', () => flyToMarker(prob));
     tray.appendChild(card);
   });
 }
 
-// ---- Drag to rotate ----
+function updateActiveTrayCard(scrollIntoView = false) {
+  document.querySelectorAll('.tray-card').forEach(card => {
+    const isActive = card.dataset.problemId === selectedProblemId;
+    card.classList.toggle('active', isActive);
+    if (isActive && scrollIntoView) {
+      card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  });
+}
+
+function applyFilters(updateStatsImmediate = true) {
+  // 1. Crisis markers
+  markers.forEach(m => {
+    m.group.visible = isProblemVisible(m.prob);
+  });
+
+  // 2. Live NASA EONET markers (active in 2026 under All or Climate)
+  const showEonet = activeYear === 2026 && (activeFilter === 'all' || activeFilter === 'climate');
+  eonetMarkers.forEach(m => {
+    m.group.visible = showEonet;
+  });
+
+  // 3. Bottom tray cards
+  populateTray();
+
+  // 4. Dynamic Hero Stats (Active Crises, People Affected, Historical Earth Health Score)
+  const visibleByYear = problems.filter(p => getCrisisYear(p) <= activeYear);
+  const visibleFiltered = problems.filter(isProblemVisible);
+
+  if (updateStatsImmediate) {
+    const statProblemsEl = document.getElementById('stat-problems');
+    if (statProblemsEl) statProblemsEl.textContent = visibleFiltered.length;
+  }
+
+  const statPeopleEl = document.getElementById('stat-people');
+  if (statPeopleEl) {
+    if (activeYear === 2026 && activeFilter === 'all') {
+      statPeopleEl.textContent = '8.1B';
+    } else {
+      const cappedPeople = Math.min(
+        8.1e9,
+        visibleFiltered.reduce((sum, p) => sum + (p.affected || 0), 0)
+      );
+      statPeopleEl.textContent = cappedPeople >= 1e9
+        ? (cappedPeople / 1e9).toFixed(1) + 'B'
+        : cappedPeople >= 1e6
+        ? Math.round(cappedPeople / 1e6) + 'M'
+        : cappedPeople.toLocaleString();
+    }
+  }
+
+  // Earth Health Score degrades from 64 (in 1990) down to 42 (in 2026) as global crises compound
+  const ratio = problems.length > 0 ? visibleByYear.length / problems.length : 1;
+  const computedHealth = Math.round(70 - ratio * 28); // 30/30 crises => 42
+  if (updateStatsImmediate) {
+    const statHealthEl = document.getElementById('stat-health');
+    const healthFillEl = document.getElementById('health-fill');
+    if (statHealthEl) statHealthEl.textContent = computedHealth;
+    if (healthFillEl) healthFillEl.style.width = `${computedHealth}%`;
+  }
+}
+
+// ---- Drag to rotate (with inertia & click-drag disambiguation) ----
 let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
+let pointerStart = { x: 0, y: 0 };
+let maxDragDelta = 0;
 let rotVel = { x: 0, y: 0 };
 
+function stopFlightTweens() {
+  isFlying = false;
+  if (window.gsap) {
+    window.gsap.killTweensOf(globe.rotation);
+    window.gsap.killTweensOf(camera.position);
+  }
+}
+
 canvas.addEventListener('mousedown', e => {
+  stopFlightTweens();
   isDragging = true;
   prevMouse = { x: e.clientX, y: e.clientY };
+  pointerStart = { x: e.clientX, y: e.clientY };
+  maxDragDelta = 0;
   rotVel = { x: 0, y: 0 };
+  canvas.style.cursor = 'grabbing';
 });
-window.addEventListener('mouseup', () => { isDragging = false; });
+
+window.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    canvas.style.cursor = 'grab';
+  }
+});
+
 window.addEventListener('mousemove', e => {
   if (!isDragging) return;
   const dx = e.clientX - prevMouse.x;
   const dy = e.clientY - prevMouse.y;
+  maxDragDelta = Math.max(maxDragDelta, Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y));
   rotVel.x = dy * 0.005;
   rotVel.y = dx * 0.005;
   prevMouse = { x: e.clientX, y: e.clientY };
@@ -235,100 +432,227 @@ window.addEventListener('mousemove', e => {
 
 // Touch support
 canvas.addEventListener('touchstart', e => {
+  stopFlightTweens();
   isDragging = true;
-  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-});
+  const touch = e.touches[0];
+  prevMouse = { x: touch.clientX, y: touch.clientY };
+  pointerStart = { x: touch.clientX, y: touch.clientY };
+  maxDragDelta = 0;
+  rotVel = { x: 0, y: 0 };
+}, { passive: true });
+
 canvas.addEventListener('touchend', () => { isDragging = false; });
+
 canvas.addEventListener('touchmove', e => {
-  if (!isDragging) return;
-  const dx = e.touches[0].clientX - prevMouse.x;
-  const dy = e.touches[0].clientY - prevMouse.y;
+  if (!isDragging || !e.touches[0]) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - prevMouse.x;
+  const dy = touch.clientY - prevMouse.y;
+  maxDragDelta = Math.max(maxDragDelta, Math.hypot(touch.clientX - pointerStart.x, touch.clientY - pointerStart.y));
   rotVel.x = dy * 0.005;
   rotVel.y = dx * 0.005;
-  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-});
+  prevMouse = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
 
 // ---- Zoom ----
 canvas.addEventListener('wheel', e => {
-  camera.position.z = Math.max(1.6, Math.min(5, camera.position.z + e.deltaY * 0.003));
-});
+  if (window.gsap) window.gsap.killTweensOf(camera.position);
+  camera.position.z = Math.max(1.55, Math.min(5, camera.position.z + e.deltaY * 0.003));
+}, { passive: true });
 
-// ---- Raycaster for click ----
+// ---- Raycaster with front-hemisphere occlusion ----
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 raycaster.params.Points.threshold = 0.05;
+raycaster.params.Line = { threshold: 0.032 };
+
+function getFrontOcclusionLimit() {
+  const globeHits = raycaster.intersectObject(globe);
+  return globeHits.length > 0 ? globeHits[0].distance + 0.05 : Infinity;
+}
 
 canvas.addEventListener('click', e => {
+  // Ignore drag releases so spinning the globe doesn't accidentally click a marker
+  if (maxDragDelta > 6) return;
+
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
-  // Check regular markers first
-  const dotMeshes = markers.map(m => m.mesh);
-  const hits = raycaster.intersectObjects(dotMeshes);
-  if (hits.length > 0) {
-    const marker = markers.find(m => m.mesh === hits[0].object);
-    if (marker) { openPanel(marker.prob); zoomToMarker(marker.basePos); return; }
+  const maxDist = getFrontOcclusionLimit();
+
+  // 1. Regular crisis markers
+  const visibleMarkers = markers.filter(m => m.group.visible);
+  const dotHits = raycaster.intersectObjects(visibleMarkers.map(m => m.mesh))
+    .filter(h => h.distance <= maxDist);
+  if (dotHits.length > 0) {
+    const marker = visibleMarkers.find(m => m.mesh === dotHits[0].object);
+    if (marker) {
+      flyToMarker(marker.prob);
+      return;
+    }
   }
 
-  // Check EONET markers
-  const eonetDots = eonetMarkers.map(m => m.dot);
-  const eonetHits = raycaster.intersectObjects(eonetDots);
+  // 2. Live NASA EONET markers
+  const visibleEonet = eonetMarkers.filter(m => m.group.visible);
+  const eonetHits = raycaster.intersectObjects(visibleEonet.map(m => m.dot))
+    .filter(h => h.distance <= maxDist);
   if (eonetHits.length > 0) {
-    const m = eonetMarkers.find(m => m.dot === eonetHits[0].object);
+    const m = visibleEonet.find(em => em.dot === eonetHits[0].object);
     if (m) {
-      // Show tooltip with live event info
-      const region = Array.isArray(m.event.coordinates)
-        ? `${m.event.coordinates[0].toFixed(2)}, ${m.event.coordinates[1].toFixed(2)}`
-        : '';
-      openPanel({
-        title: m.event.title,
-        category: 'climate',
-        regions: [region],
-        coordinates: m.event.coordinates,
-        description: `🛰️ LIVE NASA EVENT — ${m.event.category} detected on ${new Date(m.event.date).toLocaleDateString()}. This is a real-time natural event tracked by NASA Earth Observatory.`,
-        stat: m.event.category,
-        affected: null,
-        severity: 8,
-        ripples: [],
-        actions: ['Monitor updates at nasa.gov/eonet', 'Support disaster relief organizations', 'Follow local emergency services guidance'],
-        icon: m.event.category === 'Wildfires' ? '🔥' : m.event.category === 'Severe Storms' ? '🌪️' : m.event.category === 'Volcanoes' ? '🌋' : '⚠️'
-      });
+      openEonetEvent(m.event);
+      return;
+    }
+  }
+
+  // 3. Ripple connection arcs (click arc to jump to connected crisis)
+  const arcLines = rippleLines.map(r => r.line);
+  const arcHits = raycaster.intersectObjects(arcLines)
+    .filter(h => h.distance <= maxDist + 0.35);
+  if (arcHits.length > 0) {
+    const arc = rippleLines.find(r => r.line === arcHits[0].object);
+    if (arc?.toProb) {
+      flyToMarker(arc.toProb);
+      return;
+    }
+  }
+
+  // 4. Country reference pins
+  const countryHits = raycaster.intersectObjects(countryMarkers.map(c => c.dot))
+    .filter(h => h.distance <= maxDist);
+  if (countryHits.length > 0) {
+    const cm = countryMarkers.find(c => c.dot === countryHits[0].object);
+    if (cm) {
+      const select = document.getElementById('country-select');
+      if (select) select.value = cm.country.code;
+      flyToCountry(cm.country);
     }
   }
 });
 
-// Tooltip on hover
+function openEonetEvent(event) {
+  const [lat, lon] = event.coordinates;
+  const region = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+  selectedProblemId = null;
+  isPanelOpen = true;
+  updateActiveTrayCard(false);
+
+  flyToCoords(lat, lon, 1.85, true);
+  openPanel({
+    id: event.id,
+    title: event.title,
+    category: 'climate',
+    regions: [region],
+    coordinates: [lat, lon],
+    description: `🛰️ LIVE NASA EVENT — ${event.category} detected on ${new Date(event.date).toLocaleDateString()}. Real-time natural hazard telemetry tracked by the NASA Earth Observatory Natural Event Tracker (EONET).`,
+    stat: event.category,
+    affected: null,
+    severity: 8,
+    color: '#ff4500',
+    ripples: [],
+    sourceUrl: event.sourceUrl,
+    actions: [
+      'Inspect live satellite tracking via NASA EONET source link',
+      'Support rapid-response disaster relief organizations on the ground',
+      'Follow regional meteorological and emergency management advisories'
+    ],
+    icon: event.category === 'Wildfires' ? '🔥'
+      : event.category === 'Severe Storms' ? '🌪️'
+      : event.category === 'Volcanoes' ? '🌋'
+      : event.category === 'Floods' ? '🌊'
+      : '🛰️'
+  });
+}
+
+// ---- Tooltip on hover (Crisis markers, EONET live markers, Ripple arcs, Countries) ----
 canvas.addEventListener('mousemove', e => {
+  if (isDragging) {
+    tooltip.classList.add('hidden');
+    return;
+  }
+
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
-  const dotMeshes = markers.map(m => m.mesh);
-  const hits = raycaster.intersectObjects(dotMeshes);
-  if (hits.length > 0) {
-    const marker = markers.find(m => m.mesh === hits[0].object);
+
+  const maxDist = getFrontOcclusionLimit();
+
+  const showTip = (text, isRipple = false) => {
+    tooltip.textContent = text;
+    tooltip.classList.toggle('ripple-tip', isRipple);
+    tooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + 'px';
+    tooltip.style.top = (e.clientY - 12) + 'px';
+    tooltip.classList.remove('hidden');
+    canvas.style.cursor = 'pointer';
+  };
+
+  // 1. Crisis markers
+  const visibleMarkers = markers.filter(m => m.group.visible);
+  const dotHits = raycaster.intersectObjects(visibleMarkers.map(m => m.mesh))
+    .filter(h => h.distance <= maxDist);
+  if (dotHits.length > 0) {
+    const marker = visibleMarkers.find(m => m.mesh === dotHits[0].object);
     if (marker) {
       const region = Array.isArray(marker.prob.regions) ? marker.prob.regions[0] : marker.prob.region;
-      tooltip.textContent = `${marker.prob.title} — ${region}`;
-      tooltip.style.left = (e.clientX + 14) + 'px';
-      tooltip.style.top = (e.clientY - 10) + 'px';
-      tooltip.classList.remove('hidden');
-      canvas.style.cursor = 'pointer';
+      showTip(`${marker.prob.icon || '🌍'} ${marker.prob.title} — ${region}`);
+      return;
     }
-  } else {
-    tooltip.classList.add('hidden');
-    canvas.style.cursor = 'grab';
   }
+
+  // 2. Live EONET markers
+  const visibleEonet = eonetMarkers.filter(m => m.group.visible);
+  const eonetHits = raycaster.intersectObjects(visibleEonet.map(m => m.dot))
+    .filter(h => h.distance <= maxDist);
+  if (eonetHits.length > 0) {
+    const m = visibleEonet.find(em => em.dot === eonetHits[0].object);
+    if (m) {
+      showTip(`🛰️ LIVE: ${m.event.title} (${m.event.category})`);
+      return;
+    }
+  }
+
+  // 3. Ripple arcs
+  const arcHits = raycaster.intersectObjects(rippleLines.map(r => r.line))
+    .filter(h => h.distance <= maxDist + 0.35);
+  if (arcHits.length > 0) {
+    const arc = rippleLines.find(r => r.line === arcHits[0].object);
+    if (arc) {
+      showTip(`🔗 Ripple: ${arc.fromProb.title} → ${arc.toProb.title} (click to inspect)`, true);
+      return;
+    }
+  }
+
+  // 4. Country pins
+  const countryHits = raycaster.intersectObjects(countryMarkers.map(c => c.dot))
+    .filter(h => h.distance <= maxDist);
+  if (countryHits.length > 0) {
+    const cm = countryMarkers.find(c => c.dot === countryHits[0].object);
+    if (cm) {
+      const linkedCount = problems.filter(p =>
+        Array.isArray(p.regions) && p.regions.some(r => r.toLowerCase() === cm.country.name.toLowerCase())
+      ).length;
+      const suffix = linkedCount > 0 ? ` · ${linkedCount} tracked ${linkedCount === 1 ? 'crisis' : 'crises'}` : '';
+      showTip(`${cm.country.flag} ${cm.country.name} (${cm.country.region})${suffix}`);
+      return;
+    }
+  }
+
+  tooltip.classList.add('hidden');
+  canvas.style.cursor = 'grab';
 });
 
 // ---- Filter buttons ----
+export function setFilter(category) {
+  activeFilter = category || 'all';
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === activeFilter);
+  });
+  applyFilters(true);
+}
+
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFilter = btn.dataset.filter;
-    createMarkers();
-    populateTray();
+    setFilter(btn.dataset.filter);
   });
 });
 
@@ -339,39 +663,48 @@ function animate() {
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
 
-  // Auto-rotate
-  if (!isDragging) {
-    globe.rotation.y += 0.0015;
-    atmosphere.rotation.y += 0.0015;
+  if (isDragging) {
+    globe.rotation.x = Math.max(-MAX_TILT, Math.min(MAX_TILT, globe.rotation.x + rotVel.x));
+    globe.rotation.y += rotVel.y;
+  } else if (!isFlying) {
+    // Smooth momentum decay + gentle auto-rotation when panel is closed
+    const autoSpin = isPanelOpen ? 0 : 0.0015;
+    globe.rotation.x = Math.max(-MAX_TILT, Math.min(MAX_TILT, globe.rotation.x + rotVel.x));
+    globe.rotation.y += autoSpin + rotVel.y;
     rotVel.x *= 0.92;
     rotVel.y *= 0.92;
-  } else {
-    globe.rotation.x += rotVel.x;
-    globe.rotation.y += rotVel.y;
-    atmosphere.rotation.x += rotVel.x;
-    atmosphere.rotation.y += rotVel.y;
   }
 
-  // Sync markers with globe rotation
- // Sync markers with globe rotation
+  atmosphere.rotation.copy(globe.rotation);
+  gridGroup.rotation.copy(globe.rotation);
+
+  // Sync crisis markers with globe rotation
   markers.forEach(m => {
-    const pulse = Math.sin(t * 2 + m.pulseT);
-    m.ring.material.opacity = 0.3 + 0.3 * ((pulse + 1) / 2);
-    const s = 1 + 0.3 * ((pulse + 1) / 2);
+    if (!m.group.visible) return;
+    const isSelected = m.prob.id === selectedProblemId;
+    const pulse = Math.sin(t * (isSelected ? 3.5 : 2) + m.pulseT);
+    m.ring.material.opacity = isSelected
+      ? 0.65 + 0.35 * ((pulse + 1) / 2)
+      : 0.3 + 0.3 * ((pulse + 1) / 2);
+    const s = (isSelected ? 1.25 : 1) + 0.3 * ((pulse + 1) / 2);
     m.ring.scale.setScalar(s);
-
-    // Sync group rotation with globe
     m.group.rotation.copy(globe.rotation);
-
   });
 
-  // Sync ripple lines with globe rotation
-  rippleLines.forEach(l => {
+  // Sync country markers with globe rotation
+  countryMarkers.forEach(cm => {
+    cm.group.rotation.copy(globe.rotation);
+  });
+
+  // Sync & subtly pulse ripple lines
+  rippleLines.forEach((l, idx) => {
+    l.mat.opacity = 0.5 + 0.35 * ((Math.sin(t * 2.6 - idx * 0.7) + 1) / 2);
     l.group.rotation.copy(globe.rotation);
   });
 
   // Animate EONET live markers
   eonetMarkers.forEach(m => {
+    if (!m.group.visible) return;
     const pulse = Math.sin(t * 3 + m.pulseT);
     m.mat.opacity = 0.5 + 0.4 * ((pulse + 1) / 2);
     m.outerMat.opacity = 0.1 + 0.2 * ((pulse + 1) / 2);
@@ -397,49 +730,15 @@ window.addEventListener('resize', () => {
 // ---- Time machine ----
 const yearSlider = document.getElementById('year-slider');
 const tmYear = document.getElementById('tm-year');
-// Year each crisis category became prominent
-const crisisYears = {
-  'climate-001': 2000, 'climate-002': 2019, 'climate-003': 1995,
-  'climate-004': 2000, 'climate-005': 2010,
-  'hunger-001': 2008, 'hunger-002': 1990, 'hunger-003': 2011,
-  'hunger-004': 2000, 'hunger-005': 2015,
-  'conflict-001': 2011, 'conflict-002': 2022, 'conflict-003': 2015,
-  'conflict-004': 1990, 'conflict-005': 2014,
-  'health-001': 2019, 'health-002': 2000, 'health-003': 1990,
-  'health-004': 2010, 'health-005': 2005,
-  'education-001': 1995, 'education-002': 1990, 'education-003': 2000,
-  'education-004': 1995, 'education-005': 2015,
-  'economy-001': 1990, 'economy-002': 2008, 'economy-003': 1995,
-  'economy-004': 2000, 'economy-005': 2010,
-};
 
 yearSlider.addEventListener('input', () => {
-  const year = parseInt(yearSlider.value);
-  tmYear.textContent = year;
-
-  // Filter markers by year
-  markers.forEach(m => {
-    const crisisYear = crisisYears[m.prob.id] || 1990;
-    const visible = crisisYear <= year;
-    m.group.visible = visible;
-  });
-
-  // Update active crises count
-  const visibleCount = markers.filter(m => {
-    const crisisYear = crisisYears[m.prob.id] || 1990;
-    return crisisYear <= parseInt(yearSlider.value);
-  }).length;
-
-  const statEl = document.getElementById('stat-problems');
-  if (statEl) statEl.textContent = visibleCount;
-
-  // Flash the year display
-  tmYear.style.color = year < 2026 ? '#ffbe0b' : '#00f5d4';
+  activeYear = parseInt(yearSlider.value, 10);
+  tmYear.textContent = activeYear;
+  tmYear.style.color = activeYear < 2026 ? '#ffbe0b' : '#00f5d4';
+  applyFilters(true);
 });
 
 // ---- NASA EONET Live Events ----
-let eonetMarkers = [];
-
 const eonetColors = {
   'Wildfires': 0xff4500,
   'Severe Storms': 0x00aaff,
@@ -453,15 +752,20 @@ async function loadEonetEvents() {
   try {
     const res = await fetch('/api/eonet');
     const data = await res.json();
-    if (!data.events) return;
+    if (!Array.isArray(data.events)) return;
+
+    eonetMarkers.forEach(m => disposeGroup(m.group));
+    eonetMarkers = [];
 
     data.events.forEach(event => {
+      if (!Array.isArray(event.coordinates)) return;
+      const [lat, lon] = event.coordinates;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
       const color = eonetColors[event.category] || 0xffffff;
-      const lat = event.coordinates[0];
-      const lon = event.coordinates[1];
       const pos = latLonToVec3(lat, lon, 1.02);
 
-      // Outer glow ring — bigger and more dramatic than regular markers
+      // Outer glow ring
       const ringGeo = new THREE.RingGeometry(0.03, 0.05, 16);
       const ringMat = new THREE.MeshBasicMaterial({
         color, side: THREE.DoubleSide, transparent: true, opacity: 0.8
@@ -476,7 +780,7 @@ async function loadEonetEvents() {
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.copy(pos);
 
-      // LIVE label ring — extra outer pulse
+      // LIVE outer pulse ring
       const outerGeo = new THREE.RingGeometry(0.055, 0.065, 16);
       const outerMat = new THREE.MeshBasicMaterial({
         color, side: THREE.DoubleSide, transparent: true, opacity: 0.3
@@ -499,27 +803,19 @@ async function loadEonetEvents() {
       });
     });
 
-    console.log(`🛰️ NASA EONET: ${data.events.length} live events loaded`);
+    applyFilters(false);
+    console.log(`🛰️ NASA EONET: ${eonetMarkers.length} live events loaded`);
   } catch (err) {
     console.error('EONET load failed:', err);
   }
 }
 
-// ---- Boot ----
-loadProblems();
-loadEonetEvents();
-animate();
-
-// Loader fade
-setTimeout(() => {
-  document.getElementById('loader').classList.add('fade-out');
-  setTimeout(() => document.getElementById('loader').remove(), 900);
-}, 2800);
-
-
+// ---- Ripple Connection Arcs ----
 export function showRippleLines(prob) {
   clearRippleLines();
   const ripples = prob.ripples || prob.ripple_effects || [];
+  if (!ripples.length) return;
+
   const fromLat = Array.isArray(prob.coordinates) ? prob.coordinates[0] : prob.coordinates.lat;
   const fromLon = Array.isArray(prob.coordinates) ? prob.coordinates[1] : prob.coordinates.lon;
   const fromPos = latLonToVec3(fromLat, fromLon, 1.02);
@@ -532,56 +828,180 @@ export function showRippleLines(prob) {
     const toLon = Array.isArray(target.coordinates) ? target.coordinates[1] : target.coordinates.lon;
     const toPos = latLonToVec3(toLat, toLon, 1.02);
 
+    const chordDist = fromPos.distanceTo(toPos);
+    const arcHeight = 0.14 + chordDist * 0.16;
+
     const points = [];
-    for (let i = 0; i <= 50; i++) {
-      const t = i / 50;
+    for (let i = 0; i <= 56; i++) {
+      const t = i / 56;
       const pos = new THREE.Vector3().lerpVectors(fromPos, toPos, t);
-      pos.normalize().multiplyScalar(1.02 + Math.sin(Math.PI * t) * 0.3);
+      pos.normalize().multiplyScalar(1.02 + Math.sin(Math.PI * t) * arcHeight);
       points.push(pos);
     }
 
     const geo = new THREE.BufferGeometry().setFromPoints(points);
-    const mat = new THREE.LineBasicMaterial({ color: 0xf700ff, transparent: true, opacity: 0.7 });
+    const mat = new THREE.LineBasicMaterial({ color: 0xf700ff, transparent: true, opacity: 0.78 });
     const line = new THREE.Line(geo, mat);
 
-    // Wrap in group so it rotates with globe
     const group = new THREE.Group();
     group.add(line);
     group.rotation.copy(globe.rotation);
     scene.add(group);
-    rippleLines.push({ group, mat });
+    rippleLines.push({ group, line, mat, fromProb: prob, toProb: target });
   });
 }
 
 export function clearRippleLines() {
-  rippleLines.forEach(l => scene.remove(l.group));
+  rippleLines.forEach(l => disposeGroup(l.group));
   rippleLines = [];
 }
 
-// ---- Fly to marker ----
-  function flyToMarker(prob) {
-  const targetMarker = markers.find(m => m.prob.id === prob.id);
-  if (!targetMarker) return;
+// ---- Cinematic GSAP Globe Flight & Camera Zoom ----
+export function flyToCoords(lat, lon, targetZ = 1.85, panelOffset = true) {
+  const p = latLonToVec3(lat, lon, 1);
+  const rXZ = Math.hypot(p.x, p.z) || 1e-6;
+  const offsetRad = panelOffset && window.innerWidth > 900 ? 0.14 : 0;
+  const rawTargetY = -Math.atan2(p.x, p.z) - offsetRad;
+
+  // Shortest angular turn from current globe.rotation.y
+  const twoPi = Math.PI * 2;
+  const deltaY = ((rawTargetY - globe.rotation.y + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
+  const finalY = globe.rotation.y + deltaY;
+  const targetX = Math.max(-MAX_TILT, Math.min(MAX_TILT, Math.atan2(p.y, rXZ)));
+
+  rotVel = { x: 0, y: 0 };
+  isFlying = true;
+
+  if (window.gsap) {
+    window.gsap.killTweensOf(globe.rotation);
+    window.gsap.killTweensOf(camera.position);
+    window.gsap.to(globe.rotation, {
+      x: targetX,
+      y: finalY,
+      duration: 1.15,
+      ease: 'power3.out',
+      onComplete: () => { isFlying = false; }
+    });
+    window.gsap.to(camera.position, {
+      z: targetZ,
+      duration: 1.15,
+      ease: 'power3.out'
+    });
+  } else {
+    globe.rotation.x = targetX;
+    globe.rotation.y = finalY;
+    camera.position.z = targetZ;
+    isFlying = false;
+  }
+}
+
+export function flyToMarker(prob) {
+  if (!prob) return;
+
+  // Ensure marker is visible if user jumped from a cross-category ripple tag
+  let filtersChanged = false;
+  if (activeFilter !== 'all' && prob.category !== activeFilter) {
+    activeFilter = 'all';
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === 'all');
+    });
+    filtersChanged = true;
+  }
+  const probYear = getCrisisYear(prob);
+  if (probYear > activeYear) {
+    activeYear = probYear;
+    yearSlider.value = String(activeYear);
+    tmYear.textContent = activeYear;
+    tmYear.style.color = activeYear < 2026 ? '#ffbe0b' : '#00f5d4';
+    filtersChanged = true;
+  }
+  if (filtersChanged) applyFilters(true);
+
+  selectedProblemId = prob.id;
+  isPanelOpen = true;
+  updateActiveTrayCard(true);
+
+  const lat = Array.isArray(prob.coordinates) ? prob.coordinates[0] : prob.coordinates.lat;
+  const lon = Array.isArray(prob.coordinates) ? prob.coordinates[1] : prob.coordinates.lon;
+
+  flyToCoords(lat, lon, 1.85, true);
   openPanel(prob);
 }
 
-// ---- Cinematic zoom ----
-function zoomToMarker(targetPos) {
-  const startZ = camera.position.z;
-  const targetZ = 1.8;
-  const duration = 1000;
-  const start = performance.now();
+export function flyToCountry(country) {
+  if (!country) return;
+  const linkedProblem = problems.find(p =>
+    isProblemVisible(p) &&
+    Array.isArray(p.regions) &&
+    p.regions.some(r => r.toLowerCase() === country.name.toLowerCase())
+  );
 
-  function animateZoom(now) {
-    const t = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - t, 3);
-    camera.position.z = startZ + (targetZ - startZ) * ease;
-    if (t < 1) requestAnimationFrame(animateZoom);
+  if (linkedProblem) {
+    flyToCoords(country.lat, country.lon, 1.9, true);
+    selectedProblemId = linkedProblem.id;
+    isPanelOpen = true;
+    updateActiveTrayCard(true);
+    openPanel(linkedProblem);
+  } else {
+    flyToCoords(country.lat, country.lon, 2.0, isPanelOpen);
   }
-  requestAnimationFrame(animateZoom);
 }
 
-// Expose to panel
-window.__globeModule = { showRippleLines, clearRippleLines };
+export function findCountryByName(name) {
+  if (!name) return null;
+  const norm = name.trim().toLowerCase();
+  return countries.find(c =>
+    c.name.toLowerCase() === norm || c.code.toLowerCase() === norm
+  ) || null;
+}
 
-export { latLonToVec3, catColors, problems };
+export function onPanelClose() {
+  isPanelOpen = false;
+  selectedProblemId = null;
+  clearRippleLines();
+  updateActiveTrayCard(false);
+  const select = document.getElementById('country-select');
+  if (select) select.value = '';
+
+  if (window.gsap) {
+    window.gsap.killTweensOf(camera.position);
+    window.gsap.to(camera.position, {
+      z: 2.8,
+      duration: 0.9,
+      ease: 'power2.out'
+    });
+  } else {
+    camera.position.z = 2.8;
+  }
+}
+
+// ---- Boot ----
+loadCountries();
+loadProblems();
+loadEonetEvents();
+animate();
+
+// Loader fade
+setTimeout(() => {
+  const loader = document.getElementById('loader');
+  if (loader) {
+    loader.classList.add('fade-out');
+    setTimeout(() => loader.remove(), 900);
+  }
+}, 2400);
+
+// Expose API to Side Panel & Cards modules
+window.__globeModule = {
+  showRippleLines,
+  clearRippleLines,
+  flyToMarker,
+  flyToCoords,
+  flyToCountry,
+  findCountryByName,
+  setFilter,
+  onPanelClose,
+  getProblemById: id => problems.find(p => p.id === id) || null,
+  getCategoryColor: cat => '#' + (catColors[cat] || 0x00f5d4).toString(16).padStart(6, '0')
+};
+
+export { latLonToVec3, catColors, problems, countries };
